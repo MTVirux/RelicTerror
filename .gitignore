@@ -1,0 +1,10 @@
+bin/
+obj/
+*.user
+.vs/
+.idea/
+*.suo
+.claude
+CLAUDE.md
+*.lscache
+scripts/
