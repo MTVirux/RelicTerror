@@ -5,12 +5,13 @@ using Dalamud.Game.Inventory.InventoryEventArgTypes;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using RelicTerror.Data;
-using RelicTerror.Data.Series;
 using RelicTerror.GameState;
 using RelicTerror.State;
 using RelicTerror.UI;
 
 namespace RelicTerror;
+
+public enum ResetScope { Current, All }
 
 public sealed class Plugin : IDalamudPlugin
 {
@@ -19,10 +20,11 @@ public sealed class Plugin : IDalamudPlugin
     internal static Configuration Config { get; private set; } = null!;
 
     private readonly IDalamudPluginInterface _pluginInterface;
-    private readonly CharacterTracker _characterTracker;
-    private readonly ProgressReader   _progressReader;
-    private readonly MainWindow       _mainWindow;
-    private readonly ConfigWindow     _configWindow;
+    private readonly CharacterTracker   _characterTracker;
+    private readonly ProgressReader     _progressReader;
+    private readonly AchievementFetcher _achievementFetcher;
+    private readonly MainWindow         _mainWindow;
+    private readonly ConfigWindow       _configWindow;
 
     private IReadOnlyDictionary<(string, Job), WeaponProgress> _progressCache
         = new Dictionary<(string, Job), WeaponProgress>();
@@ -38,10 +40,12 @@ public sealed class Plugin : IDalamudPlugin
         Config = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         MigrateConfig();
 
-        _progressReader   = new ProgressReader();
-        _characterTracker = new CharacterTracker(Services.ClientState);
-        _mainWindow       = new MainWindow(GetProgress, GetActiveJournalQuests, _progressReader.FindItemLocation) { IsOpen = Config.OpenOnLoad };
-        _configWindow     = new ConfigWindow();
+        _progressReader     = new ProgressReader();
+        _characterTracker   = new CharacterTracker(Services.ClientState);
+        _achievementFetcher = new AchievementFetcher();
+        _achievementFetcher.ProgressUpdated += OnAchievementProgressUpdated;
+        _mainWindow         = new MainWindow(GetProgress, GetJournalQuestStatuses, _progressReader.FindItemLocation) { IsOpen = Config.OpenOnLoad };
+        _configWindow       = new ConfigWindow(ResetFloors, SeedAchievementFetch);
 
         Services.ClientState.Login              += OnLogin;
         Services.UnlockState.Unlock             += OnUnlock;
@@ -49,7 +53,7 @@ public sealed class Plugin : IDalamudPlugin
         Services.Framework.Update               += OnFrameworkUpdate;
         Services.CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Open the RelicTerror tracker window. Use \"/rt config\" to open settings.",
+            HelpMessage = "Open the RelicTerror tracker window. \"/rt config\" for settings, \"/rt refetch\" to re-pull achievements.",
         });
 
         pluginInterface.UiBuilder.Draw         += _mainWindow.Draw;
@@ -60,8 +64,12 @@ public sealed class Plugin : IDalamudPlugin
         if (Services.ClientState.IsLoggedIn)
             RebuildCache();
 
+        if (Config.AutoFetchAchievements)
+            SeedAchievementFetch();
+
         CompletionItemIdAudit.Run();
         AchievementIdAudit.Run();
+        QuestIdAudit.Run();
     }
 
     // v3: ResistanceSeries achievement order was corrected — drop any persisted floors
@@ -91,15 +99,20 @@ public sealed class Plugin : IDalamudPlugin
 
     private IReadOnlyDictionary<(string, Job), WeaponProgress> GetProgress(ulong _) => _progressCache;
 
-    private IReadOnlyList<(uint QuestId, string DisplayName)> GetActiveJournalQuests()
+    private IReadOnlyList<JournalQuestStatus> GetJournalQuestStatuses(string seriesId)
     {
-        var active = new List<(uint, string)>();
-        foreach (var q in ResistanceJournalQuests.Quests)
+        var series = RelicDatabase.AllSeries.FirstOrDefault(s => s.Id == seriesId);
+        if (series is null) return [];
+
+        var statuses = new List<JournalQuestStatus>(series.JournalQuests.Count);
+        foreach (var q in series.JournalQuests)
         {
-            if (_progressReader.IsQuestAccepted(q.QuestId))
-                active.Add((q.QuestId, q.DisplayName));
+            statuses.Add(new JournalQuestStatus(
+                q,
+                _progressReader.IsQuestAccepted(q.QuestId),
+                _progressReader.IsQuestComplete(q.QuestId)));
         }
-        return active;
+        return statuses;
     }
 
     private void OnLogin()
@@ -109,6 +122,23 @@ public sealed class Plugin : IDalamudPlugin
         // first Login tick — a later inventory/unlock event will rebuild and resave.
         _progressCache = TryHydrateFromPersistedFloors();
         RebuildCache();
+
+        // Achievement completion is per-character; re-pull for the new login.
+        if (Config.AutoFetchAchievements)
+            SeedAchievementFetch();
+    }
+
+    private void OnAchievementProgressUpdated() => _rebuildPending = true;
+
+    private void SeedAchievementFetch()
+    {
+        var ids = new HashSet<uint>();
+        foreach (var series in RelicDatabase.AllSeries)
+        foreach (var weapon in series.Weapons)
+        foreach (var step in weapon.Steps)
+            if (step.AchievementId is { } id)
+                ids.Add(id);
+        _achievementFetcher.Seed(ids);
     }
 
     private Dictionary<(string, Job), WeaponProgress> TryHydrateFromPersistedFloors()
@@ -123,14 +153,19 @@ public sealed class Plugin : IDalamudPlugin
     private void OnInventoryChanged(IReadOnlyCollection<InventoryEventArgs> _) => _rebuildPending = true;
     private void OnFrameworkUpdate(IFramework _)
     {
+        _achievementFetcher.Update();
+
         if (!_rebuildPending) return;
         _rebuildPending = false;
         RebuildCache();
     }
     private void OnCommand(string _, string args)
     {
-        if (args.Trim().Equals("config", System.StringComparison.OrdinalIgnoreCase))
+        var arg = args.Trim();
+        if (arg.Equals("config", System.StringComparison.OrdinalIgnoreCase))
             _configWindow.Toggle();
+        else if (arg.Equals("refetch", System.StringComparison.OrdinalIgnoreCase))
+            SeedAchievementFetch();
         else
             _mainWindow.Toggle();
     }
@@ -157,13 +192,34 @@ public sealed class Plugin : IDalamudPlugin
                 ProgressCache.ComputeWeaponProgress(
                     weapon,
                     itemCounts,
-                    _progressReader.IsAchievementComplete,
+                    _achievementFetcher.IsComplete,
                     storedItemIds,
+                    _progressReader.IsQuestComplete,
                     floor);
         }
 
         _progressCache = newCache;
         PersistFloors(newCache);
+    }
+
+    private void ResetFloors(ResetScope scope)
+    {
+        if (scope == ResetScope.All)
+        {
+            foreach (var info in Config.Characters.Values)
+                info.ProgressFloors.Clear();
+        }
+        else
+        {
+            if (!Services.PlayerState.IsLoaded) return;
+            var contentId = Services.PlayerState.ContentId;
+            if (contentId == 0 || !Config.Characters.TryGetValue(contentId, out var info)) return;
+            info.ProgressFloors.Clear();
+        }
+
+        Config.Save();
+        _progressCache = new Dictionary<(string, Job), WeaponProgress>();
+        RebuildCache();
     }
 
     private void PersistFloors(IReadOnlyDictionary<(string, Job), WeaponProgress> latest)
@@ -187,6 +243,8 @@ public sealed class Plugin : IDalamudPlugin
         _pluginInterface.UiBuilder.Draw         -= _configWindow.Draw;
         _pluginInterface.UiBuilder.OpenMainUi   -= OpenMainUi;
         _pluginInterface.UiBuilder.OpenConfigUi -= OpenConfigUi;
+        _achievementFetcher.ProgressUpdated -= OnAchievementProgressUpdated;
+        _achievementFetcher.Dispose();
         _mainWindow.Dispose();
         _configWindow.Dispose();
         _characterTracker.Dispose();
