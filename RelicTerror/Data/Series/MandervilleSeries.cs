@@ -78,11 +78,26 @@ internal static class MandervilleSeries
             Requirements: [ new(CosmicCrystallite, "Cosmic Crystallite", 3) ]),
     ];
 
+    // Membership and order from JournalGenre 86 ("Manderville Weapons"). Each stage pairs
+    // a once-only story quest with a repeatable per-weapon hand-in.
+    private static readonly JournalQuest[] JournalQuests =
+    [
+        new(70188, "Make It a Manderville",      Repeatable: false), // Manderville
+        new(70189, "Make Another Manderville",   Repeatable: true),  // Manderville
+        new(70261, "Well-oiled",                 Repeatable: false), // Amazing
+        new(70262, "The Next Mander-level",      Repeatable: true),  // Amazing
+        new(70307, "A Spirited Reforging",       Repeatable: false), // Majestic
+        new(70308, "In Need of Adjustment",      Repeatable: true),  // Majestic
+        new(70342, "Resonating with Perfection", Repeatable: false), // Mandervillous
+        new(70343, "Positively Mandervillous",   Repeatable: true),  // Mandervillous
+    ];
+
     public static RelicSeries Build() => new(
         Id: "Manderville",
         Name: "Manderville Weapons",
         Expansion: Expansion.EW,
         Weapons: AchievementJobOrder
             .Select(job => new RelicWeapon(job, BuildSteps(job), HasReplica: false, ReplicaItemId: null))
-            .ToList());
+            .ToList(),
+        JournalQuests: JournalQuests);
 }
