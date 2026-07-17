@@ -12,18 +12,18 @@ namespace RelicTerror.UI;
 internal sealed class MainWindow : IDisposable
 {
     private readonly Func<ulong, IReadOnlyDictionary<(string, Job), WeaponProgress>> _getProgress;
-    private readonly Func<IReadOnlyList<(uint QuestId, string DisplayName)>>         _getActiveJournalQuests;
+    private readonly Func<string, IReadOnlyList<JournalQuestStatus>>                 _getJournalQuestStatuses;
     private readonly Func<uint, ProgressReader.ItemLocation?>                       _findItemLocation;
     private bool _isOpen;
     private (string SeriesId, Job Job)? _selectedCell;
 
     internal MainWindow(
         Func<ulong, IReadOnlyDictionary<(string, Job), WeaponProgress>> getProgress,
-        Func<IReadOnlyList<(uint QuestId, string DisplayName)>> getActiveJournalQuests,
+        Func<string, IReadOnlyList<JournalQuestStatus>> getJournalQuestStatuses,
         Func<uint, ProgressReader.ItemLocation?> findItemLocation)
     {
         _getProgress             = getProgress;
-        _getActiveJournalQuests  = getActiveJournalQuests;
+        _getJournalQuestStatuses = getJournalQuestStatuses;
         _findItemLocation        = findItemLocation;
         _selectedCell            = Plugin.Config.SelectedCell;
     }
@@ -65,7 +65,7 @@ internal sealed class MainWindow : IDisposable
 
         ImGui.BeginChild("##detailpanel", new Vector2(0, 0), false);
         if (_selectedCell.HasValue && weapons.TryGetValue(_selectedCell.Value, out var progress))
-            DetailPanel.Draw(_selectedCell.Value, progress, _getActiveJournalQuests(), _findItemLocation);
+            DetailPanel.Draw(_selectedCell.Value, progress, _getJournalQuestStatuses(_selectedCell.Value.SeriesId), _findItemLocation);
         else
             ImGui.TextDisabled("Select a cell to see details.");
         ImGui.EndChild();
