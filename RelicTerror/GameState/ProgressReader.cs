@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using Dalamud.Game.Inventory;
 using Lumina.Excel.Sheets;
-using CSAchievement  = FFXIVClientStructs.FFXIV.Client.Game.UI.Achievement;
 using CSMirage       = FFXIVClientStructs.FFXIV.Client.Game.MirageManager;
 using CSQuestManager = FFXIVClientStructs.FFXIV.Client.Game.QuestManager;
 using CSUIState      = FFXIVClientStructs.FFXIV.Client.Game.UI.UIState;
@@ -110,11 +109,8 @@ internal sealed class ProgressReader
         return qm != null && qm->IsQuestAccepted(questId);
     }
 
-    internal unsafe bool IsAchievementComplete(uint achievementId)
-    {
-        var ach = CSAchievement.Instance();
-        return ach != null && ach->IsComplete((int)achievementId);
-    }
+    // For repeatable quests this reports "completed at least once".
+    internal bool IsQuestComplete(uint questId) => CSQuestManager.IsQuestComplete(questId);
 
     private Dictionary<uint, uint> GetItemIdToCabinetId()
     {
