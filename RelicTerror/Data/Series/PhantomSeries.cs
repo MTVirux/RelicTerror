@@ -70,11 +70,26 @@ internal static class PhantomSeries
             Requirements: [ new(WaningArcanite, "Waning Arcanite", 3) ]),
     ];
 
+    // Membership and order from JournalGenre 92 ("Phantom Weapons"). All once-only —
+    // additional weapons are NPC exchanges, not quest re-runs.
+    private static readonly JournalQuest[] JournalQuests =
+    [
+        new(70855, "Arcane Artistry",             Repeatable: false),
+        new(70856, "Forging the Phantasmal",      Repeatable: false), // Penumbrae
+        new(70916, "Keeping the Old Ways Alive",  Repeatable: false),
+        new(70917, "Aether, Aether, Everywhere",  Repeatable: false),
+        new(70918, "Wrought by Hands Phantasmal", Repeatable: false), // Umbrae
+        new(70990, "Timeworn Techniques",         Repeatable: false),
+        new(70991, "In Pursuit of Perfection",    Repeatable: false),
+        new(70992, "A Phantom Reborn",            Repeatable: false), // Obscurum
+    ];
+
     public static RelicSeries Build() => new(
         Id: "Phantom",
         Name: "Phantom Weapons",
         Expansion: Expansion.DT,
         Weapons: AchievementJobOrder
             .Select(job => new RelicWeapon(job, BuildSteps(job), HasReplica: false, ReplicaItemId: null))
-            .ToList());
+            .ToList(),
+        JournalQuests: JournalQuests);
 }
