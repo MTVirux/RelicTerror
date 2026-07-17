@@ -3,50 +3,47 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
+using Dalamud.Interface.Windowing;
 using RelicTerror.Data;
 using RelicTerror.GameState;
 using RelicTerror.State;
 
 namespace RelicTerror.UI;
 
-internal sealed class MainWindow : IDisposable
+internal sealed class MainWindow : Window, IDisposable
 {
     private readonly Func<ulong, IReadOnlyDictionary<(string, Job), WeaponProgress>> _getProgress;
     private readonly Func<string, IReadOnlyList<JournalQuestStatus>>                 _getJournalQuestStatuses;
     private readonly Func<uint, ProgressReader.ItemLocation?>                       _findItemLocation;
-    private bool _isOpen;
     private (string SeriesId, Job Job)? _selectedCell;
 
     internal MainWindow(
         Func<ulong, IReadOnlyDictionary<(string, Job), WeaponProgress>> getProgress,
         Func<string, IReadOnlyList<JournalQuestStatus>> getJournalQuestStatuses,
-        Func<uint, ProgressReader.ItemLocation?> findItemLocation)
+        Func<uint, ProgressReader.ItemLocation?> findItemLocation,
+        Action openConfig)
+        : base("RelicTerror")
     {
         _getProgress             = getProgress;
         _getJournalQuestStatuses = getJournalQuestStatuses;
         _findItemLocation        = findItemLocation;
         _selectedCell            = Plugin.Config.SelectedCell;
-    }
 
-    internal bool IsOpen
-    {
-        get => _isOpen;
-        set => _isOpen = value;
-    }
+        Size          = new Vector2(720, 520);
+        SizeCondition = ImGuiCond.FirstUseEver;
 
-    internal void Toggle() => _isOpen = !_isOpen;
-
-    internal void Draw()
-    {
-        if (!_isOpen) return;
-
-        ImGui.SetNextWindowSize(new Vector2(720, 520), ImGuiCond.FirstUseEver);
-        if (!ImGui.Begin("RelicTerror", ref _isOpen))
+        TitleBarButtons.Add(new TitleBarButton
         {
-            ImGui.End();
-            return;
-        }
+            Icon        = FontAwesomeIcon.Cog,
+            IconOffset  = new Vector2(2, 2),
+            Click       = m => { if (m == ImGuiMouseButton.Left) openConfig(); },
+            ShowTooltip = () => ImGui.SetTooltip("Open settings"),
+        });
+    }
 
+    public override void Draw()
+    {
         if (!Plugin.Config.HideCharacterSelector)
         {
             DrawCharacterDropdown();
@@ -75,8 +72,6 @@ internal sealed class MainWindow : IDisposable
             Plugin.Config.SelectedCell = _selectedCell;
             Plugin.Config.Save();
         }
-
-        ImGui.End();
     }
 
     private static void DrawCharacterDropdown()

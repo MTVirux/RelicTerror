@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Game.Command;
 using Dalamud.Game.Inventory.InventoryEventArgTypes;
+using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using RelicTerror.Data;
@@ -20,6 +21,7 @@ public sealed class Plugin : IDalamudPlugin
     internal static Configuration Config { get; private set; } = null!;
 
     private readonly IDalamudPluginInterface _pluginInterface;
+    private readonly WindowSystem       _windowSystem = new("RelicTerror");
     private readonly CharacterTracker   _characterTracker;
     private readonly ProgressReader     _progressReader;
     private readonly AchievementFetcher _achievementFetcher;
@@ -44,8 +46,9 @@ public sealed class Plugin : IDalamudPlugin
         _characterTracker   = new CharacterTracker(Services.ClientState);
         _achievementFetcher = new AchievementFetcher();
         _achievementFetcher.ProgressUpdated += OnAchievementProgressUpdated;
-        _mainWindow         = new MainWindow(GetProgress, GetJournalQuestStatuses, _progressReader.FindItemLocation) { IsOpen = Config.OpenOnLoad };
+        _mainWindow         = new MainWindow(GetProgress, GetJournalQuestStatuses, _progressReader.FindItemLocation, OpenConfigUi) { IsOpen = Config.OpenOnLoad };
         _configWindow       = new ConfigWindow(ResetFloors, SeedAchievementFetch);
+        _windowSystem.AddWindow(_mainWindow);
 
         Services.ClientState.Login              += OnLogin;
         Services.UnlockState.Unlock             += OnUnlock;
@@ -56,7 +59,7 @@ public sealed class Plugin : IDalamudPlugin
             HelpMessage = "Open the RelicTerror tracker window. \"/rt config\" for settings, \"/rt refetch\" to re-pull achievements.",
         });
 
-        pluginInterface.UiBuilder.Draw         += _mainWindow.Draw;
+        pluginInterface.UiBuilder.Draw         += _windowSystem.Draw;
         pluginInterface.UiBuilder.Draw         += _configWindow.Draw;
         pluginInterface.UiBuilder.OpenMainUi   += OpenMainUi;
         pluginInterface.UiBuilder.OpenConfigUi += OpenConfigUi;
@@ -239,8 +242,9 @@ public sealed class Plugin : IDalamudPlugin
         Services.UnlockState.Unlock             -= OnUnlock;
         Services.GameInventory.InventoryChanged -= OnInventoryChanged;
         Services.Framework.Update               -= OnFrameworkUpdate;
-        _pluginInterface.UiBuilder.Draw         -= _mainWindow.Draw;
+        _pluginInterface.UiBuilder.Draw         -= _windowSystem.Draw;
         _pluginInterface.UiBuilder.Draw         -= _configWindow.Draw;
+        _windowSystem.RemoveAllWindows();
         _pluginInterface.UiBuilder.OpenMainUi   -= OpenMainUi;
         _pluginInterface.UiBuilder.OpenConfigUi -= OpenConfigUi;
         _achievementFetcher.ProgressUpdated -= OnAchievementProgressUpdated;
