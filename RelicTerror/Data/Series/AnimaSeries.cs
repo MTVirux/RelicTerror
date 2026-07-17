@@ -158,11 +158,34 @@ internal static class AnimaSeries
         (Job.AST, 21010),
     ];
 
+    // Membership and order from JournalGenre 89 ("Anima Weapons"), chained via the Quest
+    // sheet's PreviousQuest links; stage notes from each quest's required-item fields.
+    // The Reconditioned Umbrite/Crystal Sand trade runs through hidden system quest 67870
+    // ("Recondition the Anima"), which never appears in the journal and is omitted here.
+    private static readonly JournalQuest[] JournalQuests =
+    [
+        new(67747, "An Unexpected Proposal",     Repeatable: false),
+        new(67748, "Soul without Life",          Repeatable: true),  // Animated
+        new(67749, "Toughening Up",              Repeatable: true),  // Awoken
+        new(67750, "Coming into Its Own",        Repeatable: true),  // Anima
+        new(67820, "Finding Your Voice",         Repeatable: true),  // Hyperconductive
+        new(67864, "A Dream Fulfilled",          Repeatable: true),  // Reconditioned
+        new(67915, "Future Proof",               Repeatable: true),  // Sharpened
+        new(67916, "Seeking Inspiration",        Repeatable: true),  // Sharpened
+        new(67917, "Cut from a Different Cloth", Repeatable: true),  // Sharpened
+        new(67932, "Born Again Anima",           Repeatable: true),  // Complete
+        new(67933, "Some Assembly Required",     Repeatable: true),  // Complete
+        new(67934, "Body and Soul",              Repeatable: false),
+        new(67939, "Words of Wisdom",            Repeatable: false),
+        new(67940, "Best Friends Forever",       Repeatable: true),  // Lux
+    ];
+
     public static RelicSeries Build() => new(
         Id: "Anima",
         Name: "Anima Weapons",
         Expansion: Expansion.HW,
         Weapons: WeaponDefs
             .Select(d => new RelicWeapon(d.Job, BuildSteps(d.Job), HasReplica: true, ReplicaItemId: d.ReplicaItemId))
-            .ToList());
+            .ToList(),
+        JournalQuests: JournalQuests);
 }
