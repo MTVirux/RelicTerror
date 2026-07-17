@@ -82,8 +82,30 @@ internal static class ZodiacSeries
             : [baseId + off];
     }
 
+    // Per-job "A Relic Reborn (<weapon>)" quests — completed once per job, so quest
+    // completion is an exact per-job marker for the base stage. Verified 2026-07-17
+    // against the Quest sheet.
+    private static readonly Dictionary<Job, uint> RelicRebornQuests = new()
+    {
+        [Job.WAR] = 66655, // Bravura
+        [Job.PLD] = 66656, // Curtana
+        [Job.MNK] = 66657, // Sphairai
+        [Job.DRG] = 66658, // Gae Bolg
+        [Job.BLM] = 66659, // Stardust Rod
+        [Job.WHM] = 66660, // Thyrus
+        [Job.BRD] = 66661, // Artemis Bow
+        [Job.SMN] = 66662, // The Veil of Wiyu
+        [Job.SCH] = 66663, // Omnilex
+        [Job.NIN] = 67115, // Yoshimitsu
+    };
+
     private static IReadOnlyList<RelicStep> BuildSteps(Job job) =>
     [
+        new("Relic",
+            AchievementId: null,
+            CompletionItemIds: null,
+            Requirements: [],
+            CompletionQuestId: RelicRebornQuests[job]),
         // No in-game achievement exists for this stage (verified 2026-05-18 against Achievement.csv).
         // Identification falls back to CompletionItemIds.
         new("Zenith",
@@ -174,11 +196,34 @@ internal static class ZodiacSeries
         (Job.SMN, 12195), (Job.SCH, 12204),
     ];
 
+    // Membership and order from JournalGenre 88 ("Zodiac Weapons") plus the unlock quest
+    // 66241, chained via the Quest sheet's PreviousQuest links. The base-stage per-job
+    // "A Relic Reborn" quests live in RelicRebornQuests instead. A duplicate row 67823
+    // also carries the name "The Vital Title"; 66097 is the one in the chain.
+    private static readonly JournalQuest[] JournalQuests =
+    [
+        new(66241, "The Weaponsmith of Legend",   Repeatable: false),
+        new(66971, "Up in Arms",                  Repeatable: false), // Atma
+        new(66972, "Trials of the Braves",        Repeatable: false), // Animus
+        new(66998, "Celestial Radiance",          Repeatable: false), // Novus
+        new(67000, "Star Light, Star Bright",     Repeatable: false), // Nexus
+        new(65742, "Mmmmmm, Soulglazed Relics",   Repeatable: false), // Braves
+        new(65892, "Wherefore Art Thou, Zodiac",  Repeatable: false), // Braves
+        new(65893, "A Ponze of Flesh",            Repeatable: true),  // Braves book
+        new(65894, "Labor of Love",               Repeatable: true),  // Braves book
+        new(65895, "Method in His Malice",        Repeatable: true),  // Braves book
+        new(65896, "A Treasured Mother",          Repeatable: true),  // Braves book
+        new(65897, "His Dark Materia",            Repeatable: false), // Zeta
+        new(66096, "Rise and Shine",              Repeatable: false), // Zeta
+        new(66097, "The Vital Title",             Repeatable: false), // Zeta
+    ];
+
     public static RelicSeries Build() => new(
         Id: "Zodiac",
         Name: "Zodiac Weapons",
         Expansion: Expansion.ARR,
         Weapons: WeaponDefs
             .Select(d => new RelicWeapon(d.Job, BuildSteps(d.Job), HasReplica: true, ReplicaItemId: d.ReplicaItemId))
-            .ToList());
+            .ToList(),
+        JournalQuests: JournalQuests);
 }
