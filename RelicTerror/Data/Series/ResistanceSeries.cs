@@ -130,11 +130,36 @@ internal static class ResistanceSeries
         (Job.BLM, 33830), (Job.SMN, 33831), (Job.RDM, 33835),
     ];
 
+    // Curated relic-relevant subset of JournalGenre 91 ("Resistance Weapons" — the full
+    // genre also spans the Bozja/Zadnor storyline) plus MSQ prerequisite 69218, in
+    // progression order. Verified 2026-07-17 against the Questionable plugin's QuestPaths
+    // (unlock chain 3834/3835/3836) and the Quest sheet; Repeatable mirrors the sheet's
+    // IsRepeatable column, and stage annotations come from each quest's required-item fields.
+    private static readonly JournalQuest[] JournalQuests =
+    [
+        new(69218, "Vows of Virtue, Deeds of Cruelty", Repeatable: false), // MSQ 5.1 prereq
+        new(69370, "Hail to the Queen",                Repeatable: false),
+        new(69371, "Path to the Past",                 Repeatable: false),
+        new(69372, "The Bozja Incident",               Repeatable: false),
+        new(69380, "Fire in the Forge",                Repeatable: false),
+        new(69381, "Resistance Is (Not) Futile",       Repeatable: true),  // Resistance (base) hand-in
+        new(69477, "Where Eagles Nest",                Repeatable: false), // Bozja story gate
+        new(69505, "A Sober Proposal",                 Repeatable: false), // Bozja story gate
+        new(69506, "For Want of a Memory",             Repeatable: true),  // Augmented Resistance hand-in
+        new(69507, "The Will to Resist",               Repeatable: true),  // Recollection hand-in
+        new(69573, "In the Queen's Image",             Repeatable: false), // story gate
+        new(69574, "Change of Arms",                   Repeatable: true),  // Law's Order hand-in
+        new(69575, "The Resistance Remembers",         Repeatable: false), // Augmented Law's Order memories (first weapon only)
+        new(69576, "A New Path of Resistance",         Repeatable: true),  // Augmented Law's Order hand-in
+        new(69637, "Irresistible",                     Repeatable: true),  // Blade's hand-in
+    ];
+
     public static RelicSeries Build() => new(
         Id: "Resistance",
         Name: "Resistance Weapons",
         Expansion: Expansion.ShB,
         Weapons: WeaponDefs
             .Select(d => new RelicWeapon(d.Job, BuildSteps(d.Job), HasReplica: true, ReplicaItemId: d.ReplicaItemId))
-            .ToList());
+            .ToList(),
+        JournalQuests: JournalQuests);
 }
