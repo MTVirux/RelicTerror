@@ -121,11 +121,19 @@ internal static class EurekaSeries
             Requirements: [ new(EurekaFragment, "Eureka Fragment", 100) ]),
     ];
 
+    // Eureka has no journal step quests — every upgrade is an in-instance NPC trade.
+    // Only the unlock quest exists (JournalGenre 90, "The Forbidden Land, Eureka").
+    private static readonly JournalQuest[] JournalQuests =
+    [
+        new(68614, "And We Shall Call It Eureka", Repeatable: false),
+    ];
+
     public static RelicSeries Build() => new(
         Id: "Eureka",
         Name: "Eurekan Weapons",
         Expansion: Expansion.SB,
         Weapons: WeaponOrder
             .Select(j => new RelicWeapon(j, BuildSteps(j), HasReplica: false, ReplicaItemId: null))
-            .ToList());
+            .ToList(),
+        JournalQuests: JournalQuests);
 }
