@@ -17,7 +17,19 @@ public sealed record RelicSeries(
     string Id,
     string Name,
     Expansion Expansion,
-    IReadOnlyList<RelicWeapon> Weapons);
+    IReadOnlyList<RelicWeapon> Weapons,
+    IReadOnlyList<JournalQuest> JournalQuests);
+
+/// <param name="QuestId">Quest-sheet row id (65536 + 16-bit game quest id). QuestManager's
+/// uint overloads mask to 16 bits, so either form matches at runtime.</param>
+/// <param name="DisplayName">Quest name as shown in the journal, sans the leading
+/// quest-type icon glyph.</param>
+/// <param name="Repeatable">Mirrors the Quest sheet's IsRepeatable column. Non-repeatable
+/// quests are completed once per character; repeatable ones are re-accepted for each
+/// additional weapon.</param>
+public sealed record JournalQuest(uint QuestId, string DisplayName, bool Repeatable);
+
+public sealed record JournalQuestStatus(JournalQuest Quest, bool IsAccepted, bool IsComplete);
 
 public sealed record RelicWeapon(
     Job Job,
@@ -26,10 +38,17 @@ public sealed record RelicWeapon(
     uint? ReplicaItemId);
 
 /// <param name="Name">Human-readable step name shown in the detail panel (e.g., "Animus", "Hyperconductive").</param>
+/// <param name="CompletionQuestId">
+/// Job-specific quest whose completion is the AUTHORITATIVE marker for the step.
+/// Checked before <see cref="AchievementId"/> because quest completion flags are
+/// always memory-resident (no achievement fetch required). Only usable when the
+/// quest is per-job (e.g., Zodiac "A Relic Reborn (Curtana)") — a shared
+/// once-per-character quest cannot attribute completion to a specific weapon.
+/// </param>
 /// <param name="AchievementId">
-/// Primary identifier. When set, this achievement's completion is the
-/// AUTHORITATIVE marker for the step — owning the form weapon is NOT
-/// sufficient if an achievement is defined here.
+/// Primary identifier when no <see cref="CompletionQuestId"/> is set. When set,
+/// this achievement's completion is the AUTHORITATIVE marker for the step —
+/// owning the form weapon is NOT sufficient if an achievement is defined here.
 /// </param>
 /// <param name="CompletionItemIds">
 /// Form-weapon item IDs for this stage. Two roles:
@@ -51,7 +70,8 @@ public sealed record RelicStep(
     string Name,
     uint? AchievementId,
     IReadOnlyList<uint>? CompletionItemIds,
-    IReadOnlyList<StepRequirement> Requirements);
+    IReadOnlyList<StepRequirement> Requirements,
+    uint? CompletionQuestId = null);
 
 public sealed record StepRequirement(
     uint ItemId,
