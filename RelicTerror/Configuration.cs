@@ -17,6 +17,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool ShowExpansionColumns { get; set; } = true;
     public bool HideCharacterSelector { get; set; } = true;
     public bool OpenOnLoad { get; set; }
+    public bool AutoFetchAchievements { get; set; } = true;
 
     public void Save() => Services.PluginInterface.SavePluginConfig(this);
 }
