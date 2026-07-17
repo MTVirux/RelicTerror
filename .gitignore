@@ -8,3 +8,4 @@ obj/
 CLAUDE.md
 *.lscache
 scripts/
+build.lock
