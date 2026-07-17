@@ -1,31 +1,31 @@
 [
-{
-  "Author": "MTVirux",
-  "Name": "RelicTerror",
-  "Punchline": "Track relic weapon quest progress across all expansions.",
-  "Description": "Track FFXIV relic weapon quest progress across all expansion series.\n\nDM @mtvirux on discord for assistance or bug reports.",
-  "Tags": [
-    "Relic",
-    "Weapon",
-    "Tracker",
-    "Quest",
-    "Progress",
-    "Terror"
-  ],
-  "InternalName": "RelicTerror",
-  "AssemblyVersion": "1.0.0.0",
-  "TestingAssemblyVersion": "1.0.0.2",
-  "RepoUrl": "https://github.com/MTVirux/RelicTerror",
-  "ApplicableVersion": "any",
-  "DalamudApiLevel": 15,
-  "TestingDalamudApiLevel": 15,
-  "IsHide": "False",
-  "IsTestingExclusive": "False",
-  "DownloadCount": 0,
-  "LastUpdate": 1784322965,
-  "DownloadLinkInstall": "https://github.com/MTVirux/RelicTerror/releases/download/1.0.0.0/RelicTerror.zip",
-  "DownloadLinkUpdate": "https://github.com/MTVirux/RelicTerror/releases/download/1.0.0.0/RelicTerror.zip",
-  "DownloadLinkTesting": "https://github.com/MTVirux/RelicTerror/releases/download/testing_1.0.0.1/RelicTerror.zip",
-  "IconUrl": "https://raw.githubusercontent.com/MTVirux/RelicTerror/main/images/icon.png"
-}
+  {
+    "Author": "MTVirux",
+    "Name": "RelicTerror",
+    "Punchline": "Track relic weapon quest progress across all expansions.",
+    "Description": "Track FFXIV relic weapon quest progress across all expansion series.\n\nDM @mtvirux on discord for assistance or bug reports.",
+    "Tags": [
+      "Relic",
+      "Weapon",
+      "Tracker",
+      "Quest",
+      "Progress",
+      "Terror"
+    ],
+    "InternalName": "RelicTerror",
+    "AssemblyVersion": "1.0.0.0",
+    "TestingAssemblyVersion": "1.0.0.2",
+    "RepoUrl": "https://github.com/MTVirux/RelicTerror",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 15,
+    "TestingDalamudApiLevel": 15,
+    "IsHide": "False",
+    "IsTestingExclusive": "False",
+    "DownloadCount": 0,
+    "LastUpdate": 1784323044,
+    "DownloadLinkInstall": "https://github.com/MTVirux/RelicTerror/releases/download/1.0.0.0/RelicTerror.zip",
+    "DownloadLinkUpdate": "https://github.com/MTVirux/RelicTerror/releases/download/1.0.0.0/RelicTerror.zip",
+    "DownloadLinkTesting": "https://github.com/MTVirux/RelicTerror/releases/download/testing_1.0.0.2/RelicTerror.zip",
+    "IconUrl": "https://raw.githubusercontent.com/MTVirux/RelicTerror/main/images/icon.png"
+  }
 ]
