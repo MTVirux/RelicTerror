@@ -36,6 +36,7 @@ public static class ProgressCache
         IReadOnlyDictionary<uint, int> itemCounts,
         Func<uint, bool> isAchievementComplete,
         IReadOnlySet<uint> storedItemIds,
+        Func<uint, bool> isQuestComplete,
         WeaponProgress? floor = null)
     {
         var steps = weapon.Steps;
@@ -45,14 +46,14 @@ public static class ProgressCache
         var floorIndex = -1;
         for (var i = 0; i < steps.Count; i++)
         {
-            if (IsStepComplete(steps[i], itemCounts, isAchievementComplete, storedItemIds))
+            if (IsStepComplete(steps[i], itemCounts, isAchievementComplete, storedItemIds, isQuestComplete))
                 floorIndex = i;
         }
 
         var completedSteps = floorIndex + 1;
         for (var i = completedSteps; i < steps.Count; i++)
         {
-            if (IsStepComplete(steps[i], itemCounts, isAchievementComplete, storedItemIds))
+            if (IsStepComplete(steps[i], itemCounts, isAchievementComplete, storedItemIds, isQuestComplete))
                 completedSteps++;
             else
                 break;
@@ -75,7 +76,7 @@ public static class ProgressCache
             .ToList();
 
         var computedRelicOwned = steps.Count > 0
-            && IsStepComplete(steps[^1], itemCounts, isAchievementComplete, storedItemIds);
+            && IsStepComplete(steps[^1], itemCounts, isAchievementComplete, storedItemIds, isQuestComplete);
         var relicOwned = computedRelicOwned || (floor?.RelicOwned ?? false);
 
         var computedReplicaOwned = weapon.HasReplica
@@ -97,19 +98,25 @@ public static class ProgressCache
     }
 
     // Single source of truth for step completion. Priority chain:
-    //   1. AchievementId — when set, authoritative. Owning the form weapon does
+    //   1. CompletionQuestId — when set, authoritative. Job-specific quest
+    //      completion flags are always memory-resident, so this needs no fetch.
+    //   2. AchievementId — when set, authoritative. Owning the form weapon does
     //      NOT mark the step done if the achievement is incomplete.
-    //   2. CompletionItemIds — fallback identifier when no achievement is set.
+    //   3. CompletionItemIds — fallback identifier when neither is set.
     //      Any listed ID present in tracked inventory / Armoury / Glamour Dresser
     //      / Armoire counts.
-    //   3. Otherwise false. Material Requirements NEVER identify completion;
+    //   4. Otherwise false. Material Requirements NEVER identify completion;
     //      they only drive the per-step progress display.
     private static bool IsStepComplete(
         RelicStep step,
         IReadOnlyDictionary<uint, int> itemCounts,
         Func<uint, bool> isAchievementComplete,
-        IReadOnlySet<uint> storedItemIds)
+        IReadOnlySet<uint> storedItemIds,
+        Func<uint, bool> isQuestComplete)
     {
+        if (step.CompletionQuestId is { } questId)
+            return isQuestComplete(questId);
+
         if (step.AchievementId is { } achId)
             return isAchievementComplete(achId);
 
