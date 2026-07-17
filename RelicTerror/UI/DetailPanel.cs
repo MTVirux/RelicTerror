@@ -20,13 +20,13 @@ internal static class DetailPanel
     internal static void Draw(
         (string SeriesId, Job Job) cell,
         WeaponProgress progress,
-        IReadOnlyList<(uint QuestId, string DisplayName)> activeJournalQuests,
+        IReadOnlyList<JournalQuestStatus> journalQuests,
         Func<uint, ProgressReader.ItemLocation?> findItemLocation)
     {
         ImGui.TextColored(ColorCurrent, $"{cell.Job} — {cell.SeriesId} Weapon");
         ImGui.Separator();
 
-        var showQuestPanel = cell.SeriesId == "Resistance";
+        var showQuestPanel = journalQuests.Count > 0;
         var topAreaHeight = showQuestPanel
             ? ImGui.GetContentRegionAvail().Y * 0.55f
             : 0f;
@@ -51,7 +51,7 @@ internal static class DetailPanel
         if (showQuestPanel)
         {
             ImGui.BeginChild("##questactivity", new Vector2(0, 0), false);
-            QuestActivityPanel.Draw(activeJournalQuests);
+            QuestActivityPanel.Draw(cell.SeriesId, journalQuests);
             ImGui.EndChild();
         }
     }
