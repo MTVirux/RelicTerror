@@ -12,6 +12,7 @@ namespace RelicTerror.UI;
 internal static class DetailPanel
 {
     private static readonly Vector4 ColorComplete = new(0.3f,  0.85f, 0.5f,  1f);
+    private static readonly Vector4 ColorReplica  = new(0.72f, 0.5f,  0.95f, 1f);
     private static readonly Vector4 ColorCurrent  = new(0.98f, 0.75f, 0.15f, 1f);
     private static readonly Vector4 ColorDimmed   = new(0.45f, 0.45f, 0.45f, 1f);
     private static readonly Vector4 ColorPartial  = new(0.98f, 0.75f, 0.15f, 1f);
@@ -79,7 +80,7 @@ internal static class DetailPanel
             progress.RelicOwned ? "Relic owned" : "Relic not acquired");
         DrawIconLabel(
             progress.ReplicaOwned ? FontAwesomeIcon.Check : FontAwesomeIcon.Circle,
-            progress.ReplicaOwned ? ColorComplete : ColorDimmed,
+            progress.ReplicaOwned ? ColorReplica : ColorDimmed,
             progress.ReplicaOwned ? "Replica owned" : "Replica not acquired");
     }
 

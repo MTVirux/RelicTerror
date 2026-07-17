@@ -20,6 +20,7 @@ internal static class GridView
     ];
 
     private static readonly Vector4 ColorComplete   = new(0.3f,  0.85f, 0.5f,  1f);
+    private static readonly Vector4 ColorReplica    = new(0.72f, 0.5f,  0.95f, 1f);
     private static readonly Vector4 ColorPartial    = new(0.98f, 0.75f, 0.15f, 1f);
     private static readonly Vector4 ColorNotStarted = new(0.5f,  0.5f,  0.5f,  1f);
     private static readonly Vector4 ColorNA         = new(0.35f, 0.35f, 0.35f, 1f);
@@ -139,7 +140,7 @@ internal static class GridView
             return (FontAwesomeIcon.Circle, ColorNotStarted);
 
         if (progress.RelicOwned)
-            return (FontAwesomeIcon.Check, ColorComplete);
+            return (FontAwesomeIcon.Check, progress.ReplicaOwned ? ColorReplica : ColorComplete);
 
         if (progress.CompletedSteps > 0)
             return (FontAwesomeIcon.DotCircle, ColorPartial);
