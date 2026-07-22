@@ -1,6 +1,5 @@
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Utility;
 
 namespace RelicTerror.UI;
 
@@ -9,11 +8,7 @@ internal sealed class FirstRunNotice
     // Bump to re-show the notice to users who acknowledged an older version.
     private const int NoticeVersion = 1;
 
-    private const string PopupId       = "RelicTerror - Heads up!###RelicTerror.FirstRunNotice";
-    private const string IssuesUrl     = "https://github.com/MTVirux/RelicTerror/issues";
-    private const string DiscordHandle = "@mtvirux";
-
-    private double _copiedUntil;
+    private const string PopupId = "RelicTerror - Heads up!###RelicTerror.FirstRunNotice";
 
     internal void Draw()
     {
@@ -40,19 +35,8 @@ internal sealed class FirstRunNotice
             ImGui.Separator();
             ImGui.Spacing();
 
-            if (ImGui.Button("Open GitHub Issues"))
-                Util.OpenLink(IssuesUrl);
-            ImGui.SameLine();
-            if (ImGui.Button("Copy Discord handle"))
-            {
-                ImGui.SetClipboardText(DiscordHandle);
-                _copiedUntil = ImGui.GetTime() + 2.0;
-            }
-            if (ImGui.GetTime() < _copiedUntil)
-            {
-                ImGui.SameLine();
-                ImGui.TextDisabled("Copied!");
-            }
+            SupportLinks.DrawButtons();
+            ImGui.TextDisabled("These buttons are also available in the configuration window (/rt config).");
 
             ImGui.Spacing();
             if (ImGui.Button("Got it", new Vector2(120, 0)))

@@ -90,6 +90,14 @@ internal sealed class ConfigWindow : IDisposable
         ImGui.Separator();
         ImGui.Spacing();
 
+        ImGui.TextUnformatted("Feedback & support");
+        ImGui.TextDisabled("Bug reports and suggestions are highly appreciated!");
+        SupportLinks.DrawButtons();
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
         DrawDangerZone();
 
         ImGui.End();
