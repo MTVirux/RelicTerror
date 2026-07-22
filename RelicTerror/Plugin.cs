@@ -27,6 +27,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly AchievementFetcher _achievementFetcher;
     private readonly MainWindow         _mainWindow;
     private readonly ConfigWindow       _configWindow;
+    private readonly FirstRunNotice     _firstRunNotice;
 
     private IReadOnlyDictionary<(string, Job), WeaponProgress> _progressCache
         = new Dictionary<(string, Job), WeaponProgress>();
@@ -48,6 +49,7 @@ public sealed class Plugin : IDalamudPlugin
         _achievementFetcher.ProgressUpdated += OnAchievementProgressUpdated;
         _mainWindow         = new MainWindow(GetProgress, GetJournalQuestStatuses, _progressReader.FindItemLocation, OpenConfigUi) { IsOpen = Config.OpenOnLoad };
         _configWindow       = new ConfigWindow(ResetFloors, SeedAchievementFetch);
+        _firstRunNotice     = new FirstRunNotice();
         _windowSystem.AddWindow(_mainWindow);
 
         Services.ClientState.Login              += OnLogin;
@@ -61,6 +63,7 @@ public sealed class Plugin : IDalamudPlugin
 
         pluginInterface.UiBuilder.Draw         += _windowSystem.Draw;
         pluginInterface.UiBuilder.Draw         += _configWindow.Draw;
+        pluginInterface.UiBuilder.Draw         += _firstRunNotice.Draw;
         pluginInterface.UiBuilder.OpenMainUi   += OpenMainUi;
         pluginInterface.UiBuilder.OpenConfigUi += OpenConfigUi;
 
@@ -244,6 +247,7 @@ public sealed class Plugin : IDalamudPlugin
         Services.Framework.Update               -= OnFrameworkUpdate;
         _pluginInterface.UiBuilder.Draw         -= _windowSystem.Draw;
         _pluginInterface.UiBuilder.Draw         -= _configWindow.Draw;
+        _pluginInterface.UiBuilder.Draw         -= _firstRunNotice.Draw;
         _windowSystem.RemoveAllWindows();
         _pluginInterface.UiBuilder.OpenMainUi   -= OpenMainUi;
         _pluginInterface.UiBuilder.OpenConfigUi -= OpenConfigUi;
