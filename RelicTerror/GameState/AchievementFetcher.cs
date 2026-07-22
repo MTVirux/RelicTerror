@@ -14,10 +14,12 @@ namespace RelicTerror.GameState;
 internal sealed unsafe class AchievementFetcher : IDisposable
 {
     internal event Action? ProgressUpdated;
+    internal event Action? FetchCompleted;
 
     private readonly Hook<CSAchievement.Delegates.ReceiveAchievementProgress> _hook;
     private readonly HashSet<uint> _pending  = [];
     private readonly HashSet<uint> _complete = [];
+    private bool _fetchActive;
 
     internal AchievementFetcher()
     {
@@ -26,12 +28,25 @@ internal sealed unsafe class AchievementFetcher : IDisposable
         _hook.Enable();
     }
 
+    internal IReadOnlyCollection<uint> CompletedIds => _complete;
+
+    // Completions never regress, so seeding keeps hydrated/observed completions intact.
     internal void Seed(IEnumerable<uint> achievementIds)
     {
         _pending.Clear();
-        _complete.Clear();
         foreach (var id in achievementIds)
             if (id != 0) _pending.Add(id);
+        _fetchActive = _pending.Count > 0;
+    }
+
+    // Character switch: drop the previous character's state and reload from persistence.
+    internal void ResetForCharacter(IEnumerable<uint> persistedCompleted)
+    {
+        _pending.Clear();
+        _fetchActive = false;
+        _complete.Clear();
+        foreach (var id in persistedCompleted)
+            _complete.Add(id);
     }
 
     internal void Update()
@@ -54,10 +69,15 @@ internal sealed unsafe class AchievementFetcher : IDisposable
 
     private void ReceiveAchievementProgressDetour(CSAchievement* self, uint id, uint current, uint max)
     {
-        _pending.Remove(id);
+        var drained = _pending.Remove(id) && _fetchActive && _pending.Count == 0;
         if (max > 0 && current >= max)
             _complete.Add(id);
         ProgressUpdated?.Invoke();
+        if (drained)
+        {
+            _fetchActive = false;
+            FetchCompleted?.Invoke();
+        }
         _hook.Original(self, id, current, max);
     }
 

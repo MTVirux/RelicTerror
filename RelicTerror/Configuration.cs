@@ -17,7 +17,6 @@ public sealed class Configuration : IPluginConfiguration
     public bool ShowExpansionColumns { get; set; } = true;
     public bool HideCharacterSelector { get; set; } = true;
     public bool OpenOnLoad { get; set; }
-    public bool AutoFetchAchievements { get; set; } = true;
     public int AcknowledgedNoticeVersion { get; set; }
 
     public void Save() => Services.PluginInterface.SavePluginConfig(this);
@@ -31,6 +30,11 @@ public sealed class CharacterInfo
     public DateTime LastSeen { get; set; }
 
     public Dictionary<string, RelicFloor> ProgressFloors { get; set; } = [];
+
+    // Achievement completion is monotonic, so persisting it lets steps resolve
+    // without re-querying the server on every login.
+    public HashSet<uint> CompletedAchievements { get; set; } = [];
+    public DateTime LastAchievementFetch { get; set; }
 }
 
 [Serializable]

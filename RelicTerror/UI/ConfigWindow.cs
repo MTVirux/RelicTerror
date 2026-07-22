@@ -76,15 +76,12 @@ internal sealed class ConfigWindow : IDisposable
 
         ImGui.Spacing();
 
-        var autoFetch = Plugin.Config.AutoFetchAchievements;
-        if (ImGui.Checkbox("Auto-fetch achievements on startup", ref autoFetch))
-        {
-            Plugin.Config.AutoFetchAchievements = autoFetch;
-            Plugin.Config.Save();
-        }
-        ImGui.TextDisabled("Pulls relic achievement completion from the server so steps resolve\nwithout opening the in-game Achievements window.");
+        ImGui.TextUnformatted("Achievements");
+        ImGui.TextDisabled("Relic achievement completion is pulled from the server once per character\nand cached, so steps resolve without opening the in-game Achievements window.");
         if (ImGui.Button("Re-fetch now"))
             _refetchAchievements();
+        ImGui.SameLine();
+        ImGui.TextDisabled("(updates the cache from the server)");
 
         ImGui.Spacing();
         ImGui.Separator();

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Game.Command;
@@ -36,6 +37,11 @@ public sealed class Plugin : IDalamudPlugin
     // fires a burst of per-slot events. Coalesce them into one rebuild on the next frame.
     private bool _rebuildPending;
 
+    // ContentId may not be loaded on the Login tick itself, so achievement hydration
+    // (and the first-time fetch decision) is deferred to the frame loop.
+    private bool _achievementHydratePending;
+    private bool _achievementFetchCompleted;
+
     public Plugin(IDalamudPluginInterface pluginInterface)
     {
         _pluginInterface = pluginInterface;
@@ -47,6 +53,7 @@ public sealed class Plugin : IDalamudPlugin
         _characterTracker   = new CharacterTracker(Services.ClientState);
         _achievementFetcher = new AchievementFetcher();
         _achievementFetcher.ProgressUpdated += OnAchievementProgressUpdated;
+        _achievementFetcher.FetchCompleted  += OnAchievementFetchCompleted;
         _mainWindow         = new MainWindow(GetProgress, GetJournalQuestStatuses, _progressReader.FindItemLocation, OpenConfigUi) { IsOpen = Config.OpenOnLoad };
         _configWindow       = new ConfigWindow(ResetFloors, SeedAchievementFetch);
         _firstRunNotice     = new FirstRunNotice();
@@ -70,8 +77,7 @@ public sealed class Plugin : IDalamudPlugin
         if (Services.ClientState.IsLoggedIn)
             RebuildCache();
 
-        if (Config.AutoFetchAchievements)
-            SeedAchievementFetch();
+        _achievementHydratePending = true;
 
         CompletionItemIdAudit.Run();
         AchievementIdAudit.Run();
@@ -129,12 +135,14 @@ public sealed class Plugin : IDalamudPlugin
         _progressCache = TryHydrateFromPersistedFloors();
         RebuildCache();
 
-        // Achievement completion is per-character; re-pull for the new login.
-        if (Config.AutoFetchAchievements)
-            SeedAchievementFetch();
+        // Achievement completion is per-character; rehydrate (and maybe re-pull) for the new login.
+        _achievementHydratePending = true;
     }
 
     private void OnAchievementProgressUpdated() => _rebuildPending = true;
+
+    // Raised from the receive detour; defer config writes to the framework thread.
+    private void OnAchievementFetchCompleted() => _achievementFetchCompleted = true;
 
     private void SeedAchievementFetch()
     {
@@ -159,11 +167,48 @@ public sealed class Plugin : IDalamudPlugin
     private void OnInventoryChanged(IReadOnlyCollection<InventoryEventArgs> _) => _rebuildPending = true;
     private void OnFrameworkUpdate(IFramework _)
     {
+        if (_achievementHydratePending)
+            TryHydrateAchievements();
+
         _achievementFetcher.Update();
+
+        if (_achievementFetchCompleted)
+        {
+            _achievementFetchCompleted = false;
+            PersistFetchedAchievements();
+        }
 
         if (!_rebuildPending) return;
         _rebuildPending = false;
         RebuildCache();
+    }
+
+    private void TryHydrateAchievements()
+    {
+        if (!Services.PlayerState.IsLoaded) return;
+        var contentId = Services.PlayerState.ContentId;
+        if (contentId == 0) return;
+
+        _achievementHydratePending = false;
+        Config.Characters.TryGetValue(contentId, out var info);
+        _achievementFetcher.ResetForCharacter(info?.CompletedAchievements ?? []);
+        if (info?.CompletedAchievements.Count > 0)
+            _rebuildPending = true;
+
+        // Fetch once per character ever; afterwards only the manual re-fetch pulls again.
+        if (info is null || info.LastAchievementFetch == default)
+            SeedAchievementFetch();
+    }
+
+    private void PersistFetchedAchievements()
+    {
+        if (!Services.PlayerState.IsLoaded) return;
+        var contentId = Services.PlayerState.ContentId;
+        if (contentId == 0 || !Config.Characters.TryGetValue(contentId, out var info)) return;
+
+        info.CompletedAchievements.UnionWith(_achievementFetcher.CompletedIds);
+        info.LastAchievementFetch = DateTime.UtcNow;
+        Config.Save();
     }
     private void OnCommand(string _, string args)
     {
@@ -252,6 +297,7 @@ public sealed class Plugin : IDalamudPlugin
         _pluginInterface.UiBuilder.OpenMainUi   -= OpenMainUi;
         _pluginInterface.UiBuilder.OpenConfigUi -= OpenConfigUi;
         _achievementFetcher.ProgressUpdated -= OnAchievementProgressUpdated;
+        _achievementFetcher.FetchCompleted  -= OnAchievementFetchCompleted;
         _achievementFetcher.Dispose();
         _mainWindow.Dispose();
         _configWindow.Dispose();
