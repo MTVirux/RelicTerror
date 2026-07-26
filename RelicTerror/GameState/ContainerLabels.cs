@@ -72,9 +72,14 @@ internal static class ContainerLabels
             _                        => ($"Container {container}",       StorageCategory.Personal),
         };
 
+    // Prefixed rather than suffixed because the trailing slot already carries which part of the
+    // retainer holds it - "(retainer) Moogleworth (on sale)".
+    private const string RetainerPrefix = "(retainer) ";
+
     private static string RetainerLabel(ulong retainerId, string? suffix)
     {
-        var name = OwnerNames.Retainer(retainerId) ?? "Retainer";
-        return suffix is null ? name : $"{name} ({suffix})";
+        var name  = OwnerNames.Retainer(retainerId);
+        var label = name is null ? "Retainer" : RetainerPrefix + name;
+        return suffix is null ? label : $"{label} ({suffix})";
     }
 }
