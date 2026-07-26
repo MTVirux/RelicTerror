@@ -17,6 +17,8 @@ internal sealed class MainWindow : Window, IDisposable
     private readonly Func<string, IReadOnlyList<JournalQuestStatus>>                 _getJournalQuestStatuses;
     private readonly Func<LocationLookup>                                          _getLocationLookup;
     private readonly Func<(string SeriesId, Job Job), bool>                        _isResolving;
+    private readonly Func<bool>                                                   _allaganToolsConnected;
+    private readonly TitleBarButton                                               _integrationsButton;
     private (string SeriesId, Job Job)? _selectedCell;
 
     internal MainWindow(
@@ -24,6 +26,7 @@ internal sealed class MainWindow : Window, IDisposable
         Func<string, IReadOnlyList<JournalQuestStatus>> getJournalQuestStatuses,
         Func<LocationLookup> getLocationLookup,
         Func<(string SeriesId, Job Job), bool> isResolving,
+        Func<bool> allaganToolsConnected,
         Action openConfig,
         Action openItemTotals)
         : base("RelicTerror")
@@ -32,10 +35,14 @@ internal sealed class MainWindow : Window, IDisposable
         _getJournalQuestStatuses = getJournalQuestStatuses;
         _getLocationLookup       = getLocationLookup;
         _isResolving             = isResolving;
+        _allaganToolsConnected   = allaganToolsConnected;
         _selectedCell            = Plugin.Config.SelectedCell;
 
         Size          = new Vector2(720, 520);
         SizeCondition = ImGuiCond.FirstUseEver;
+
+        _integrationsButton = IntegrationsButton.Build(allaganToolsConnected, openConfig);
+        TitleBarButtons.Add(_integrationsButton);
 
         TitleBarButtons.Add(new TitleBarButton
         {
@@ -53,6 +60,9 @@ internal sealed class MainWindow : Window, IDisposable
             ShowTooltip = () => ImGui.SetTooltip("Item totals"),
         });
     }
+
+    public override void PreDraw() =>
+        IntegrationsButton.Refresh(_integrationsButton, _allaganToolsConnected());
 
     public override void Draw()
     {

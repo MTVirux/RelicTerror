@@ -111,15 +111,12 @@ internal sealed class ConfigWindow : IDisposable
 
     private void DrawInventorySourceStatus()
     {
-        var connected = _allaganToolsConnected();
-
         ImGui.TextUnformatted("Item locations");
-        ImGui.TextColored(
-            connected ? new Vector4(0.3f, 0.85f, 0.5f, 1f) : new Vector4(0.45f, 0.45f, 0.45f, 1f),
-            connected ? "Allagan Tools connected" : "Allagan Tools not detected");
-        ImGui.TextDisabled(connected
-            ? "Locations and item counts cover your retainers, Free Company chest and\nhousing storerooms without summoning or opening them."
-            : "Falling back to inventories the game keeps loaded. Retainer bags only report\nwhile that retainer is summoned. Install Allagan Tools to search them all.");
+        foreach (var integration in Integrations.All(_allaganToolsConnected()))
+        {
+            ImGui.TextColored(integration.Color, $"{integration.Name} {integration.State}");
+            ImGui.TextDisabled(integration.Detail);
+        }
     }
 
     private void DrawDangerZone()

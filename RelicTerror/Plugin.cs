@@ -68,7 +68,7 @@ public sealed class Plugin : IDalamudPlugin
         _allaganTools       = new AllaganToolsIpc();
         _achievementFetcher.ProgressUpdated += OnAchievementProgressUpdated;
         _achievementFetcher.FetchCompleted  += OnAchievementFetchCompleted;
-        _mainWindow         = new MainWindow(GetProgress, GetJournalQuestStatuses, GetLocationLookup, IsWeaponResolving, OpenConfigUi, OpenItemTotalsUi) { IsOpen = Config.OpenOnLoad };
+        _mainWindow         = new MainWindow(GetProgress, GetJournalQuestStatuses, GetLocationLookup, IsWeaponResolving, () => _progressReader.CoversAllStorage, OpenConfigUi, OpenItemTotalsUi) { IsOpen = Config.OpenOnLoad };
         _configWindow       = new ConfigWindow(ResetFloors, SeedAchievementFetch, () => _progressReader.CoversAllStorage);
         _itemTotalsWindow   = new ItemTotalsWindow(() => _progressCache, () => _itemCounts);
         _firstRunNotice     = new FirstRunNotice();
