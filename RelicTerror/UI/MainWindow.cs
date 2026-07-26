@@ -41,7 +41,7 @@ internal sealed class MainWindow : Window, IDisposable
         Size          = new Vector2(720, 520);
         SizeCondition = ImGuiCond.FirstUseEver;
 
-        _integrationsButton = IntegrationsButton.Build(allaganToolsConnected, openConfig);
+        _integrationsButton = IntegrationsButton.Build(allaganToolsConnected);
         TitleBarButtons.Add(_integrationsButton);
 
         TitleBarButtons.Add(new TitleBarButton

@@ -13,12 +13,13 @@ namespace RelicTerror.UI;
 /// </summary>
 internal static class IntegrationsButton
 {
-    internal static TitleBarButton Build(Func<bool> allaganToolsConnected, Action openConfig) => new()
+    internal static TitleBarButton Build(Func<bool> allaganToolsConnected) => new()
     {
         Icon        = FontAwesomeIcon.Link,
         IconOffset  = new Vector2(2, 2),
         IconColor   = Integrations.AggregateColor(Integrations.All(allaganToolsConnected())),
-        Click       = m => { if (m == ImGuiMouseButton.Left) openConfig(); },
+        // A read-only indicator, but Dalamud invokes Click unconditionally, so it cannot be null.
+        Click       = _ => { },
         ShowTooltip = () => DrawTooltip(allaganToolsConnected()),
     };
 
@@ -46,9 +47,6 @@ internal static class IntegrationsButton
             ImGui.TextDisabled(integration.Detail);
             ImGui.Unindent();
         }
-
-        ImGui.Separator();
-        ImGui.TextDisabled("Click to open settings.");
 
         ImGui.EndTooltip();
     }

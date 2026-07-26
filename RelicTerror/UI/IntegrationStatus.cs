@@ -22,6 +22,7 @@ internal static class Integrations
     internal static readonly Vector4 ConnectedColor = new(0.3f,  0.85f, 0.5f,  1f);
     internal static readonly Vector4 PartialColor   = new(0.98f, 0.75f, 0.15f, 1f);
     internal static readonly Vector4 AbsentColor    = new(0.45f, 0.45f, 0.45f, 1f);
+    internal static readonly Vector4 AllGoodColor   = new(1f,    1f,    1f,    1f);
 
     internal static IReadOnlyList<IntegrationStatus> All(bool allaganToolsConnected) =>
         [AllaganTools(allaganToolsConnected)];
@@ -34,6 +35,11 @@ internal static class Integrations
             ? "Locations and item counts cover your retainers, Free Company chest and\nhousing storerooms without summoning or opening them."
             : "Falling back to inventories the game keeps loaded. Retainer bags only report\nwhile that retainer is summoned. Install Allagan Tools to search them all.");
 
+    /// <summary>
+    /// The indicator's tint. White when every integration is live: there is nothing to flag, so it
+    /// reads as an ordinary title bar button. Colour is spent only on what needs attention, which
+    /// is why this differs from the per-integration text colour.
+    /// </summary>
     internal static Vector4 AggregateColor(IReadOnlyList<IntegrationStatus> statuses)
     {
         var connected = 0;
@@ -41,6 +47,6 @@ internal static class Integrations
             if (status.Connected) connected++;
 
         if (connected == 0) return AbsentColor;
-        return connected == statuses.Count ? ConnectedColor : PartialColor;
+        return connected == statuses.Count ? AllGoodColor : PartialColor;
     }
 }
