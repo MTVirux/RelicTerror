@@ -54,7 +54,7 @@ internal sealed class MainWindow : Window, IDisposable
 
         TitleBarButtons.Add(new TitleBarButton
         {
-            Icon        = FontAwesomeIcon.ListUl,
+            Icon        = FontAwesomeIcon.ClipboardList,
             IconOffset  = new Vector2(2, 2),
             Click       = m => { if (m == ImGuiMouseButton.Left) openItemTotals(); },
             ShowTooltip = () => ImGui.SetTooltip("Item totals"),
