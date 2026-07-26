@@ -1,5 +1,3 @@
-using CSRetainerManager = FFXIVClientStructs.FFXIV.Client.Game.RetainerManager;
-
 namespace RelicTerror.GameState;
 
 /// <summary>
@@ -76,27 +74,7 @@ internal static class ContainerLabels
 
     private static string RetainerLabel(ulong retainerId, string? suffix)
     {
-        var name = ResolveRetainerName(retainerId) ?? "Retainer";
+        var name = OwnerNames.Retainer(retainerId) ?? "Retainer";
         return suffix is null ? name : $"{name} ({suffix})";
-    }
-
-    // The retainer roster is resident once the list has loaded this session, which does not
-    // require summoning any of them. An id that is not on it falls back to a generic label.
-    private static unsafe string? ResolveRetainerName(ulong retainerId)
-    {
-        if (retainerId == 0) return null;
-
-        var manager = CSRetainerManager.Instance();
-        if (manager == null) return null;
-
-        foreach (ref var retainer in manager->Retainers)
-        {
-            if (retainer.RetainerId != retainerId) continue;
-
-            var name = retainer.NameString;
-            return string.IsNullOrEmpty(name) ? null : name;
-        }
-
-        return null;
     }
 }
