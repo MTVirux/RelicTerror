@@ -28,12 +28,15 @@ internal static class DetailPanel
         ImGui.Separator();
 
         var showQuestPanel = journalQuests.Count > 0;
-        var topAreaHeight = showQuestPanel
-            ? ImGui.GetContentRegionAvail().Y * 0.55f
-            : 0f;
+        var questsExpanded = showQuestPanel && Plugin.Config.ExpandJournalQuests;
 
-        var topAreaSize = showQuestPanel ? new Vector2(0, topAreaHeight) : new Vector2(0, 0);
-        ImGui.BeginChild("##detailtop", topAreaSize, false);
+        var avail = ImGui.GetContentRegionAvail().Y;
+        var topAreaHeight =
+            !showQuestPanel ? 0f :
+            questsExpanded  ? avail * 0.55f :
+                              MathF.Max(avail - QuestActivityPanel.CollapsedHeight(), 1f);
+
+        ImGui.BeginChild("##detailtop", new Vector2(0, topAreaHeight), false);
 
         var halfWidth = ImGui.GetContentRegionAvail().X * 0.48f;
 
@@ -49,11 +52,19 @@ internal static class DetailPanel
 
         ImGui.EndChild();
 
-        if (showQuestPanel)
+        if (!showQuestPanel)
+            return;
+
+        // Collapsed, the section is only its header, so it needs no scroll child.
+        if (questsExpanded)
         {
             ImGui.BeginChild("##questactivity", new Vector2(0, 0), false);
             QuestActivityPanel.Draw(cell.SeriesId, journalQuests);
             ImGui.EndChild();
+        }
+        else
+        {
+            QuestActivityPanel.Draw(cell.SeriesId, journalQuests);
         }
     }
 

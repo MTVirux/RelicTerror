@@ -15,6 +15,7 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool UseLongJobNames { get; set; }
     public bool ShowExpansionColumns { get; set; } = true;
+    public bool ExpandJournalQuests { get; set; } = true;
     public bool HideCharacterSelector { get; set; } = true;
     public bool OpenOnLoad { get; set; }
     public int AcknowledgedNoticeVersion { get; set; }
