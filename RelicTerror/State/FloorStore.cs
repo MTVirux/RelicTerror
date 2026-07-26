@@ -25,7 +25,11 @@ internal static class FloorStore
                 Steps:          [],
                 RelicOwned:     floor.CompletedSteps == weapon.Steps.Count,
                 ReplicaOwned:   floor.ReplicaOwned,
-                Forms:          Array.Empty<FormOwnership>());
+                Forms:          Array.Empty<FormOwnership>(),
+                RelicItemIds:   weapon.Steps.Count > 0
+                                    ? weapon.Steps[^1].CompletionItemIds ?? Array.Empty<uint>()
+                                    : Array.Empty<uint>(),
+                ReplicaItemId:  weapon.HasReplica ? weapon.ReplicaItemId : null);
         }
         return seed;
     }

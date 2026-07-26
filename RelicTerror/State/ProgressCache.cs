@@ -11,7 +11,9 @@ public sealed record WeaponProgress(
     IReadOnlyList<StepDetail> Steps,
     bool RelicOwned,
     bool ReplicaOwned,
-    IReadOnlyList<FormOwnership> Forms);
+    IReadOnlyList<FormOwnership> Forms,
+    IReadOnlyList<uint> RelicItemIds,
+    uint? ReplicaItemId);
 
 public sealed record FormOwnership(
     int StepIndex,
@@ -94,7 +96,19 @@ public static class ProgressCache
             forms.Add(new FormOwnership(i, steps[i].Name, ids, owned));
         }
 
-        return new WeaponProgress(completedSteps, steps.Count, stepDetails, relicOwned, replicaOwned, forms);
+        IReadOnlyList<uint> relicItemIds = steps.Count > 0
+            ? steps[^1].CompletionItemIds ?? []
+            : [];
+
+        return new WeaponProgress(
+            completedSteps,
+            steps.Count,
+            stepDetails,
+            relicOwned,
+            replicaOwned,
+            forms,
+            relicItemIds,
+            weapon.HasReplica ? weapon.ReplicaItemId : null);
     }
 
     // Single source of truth for step completion. Priority chain:

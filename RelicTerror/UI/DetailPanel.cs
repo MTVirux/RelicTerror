@@ -74,14 +74,88 @@ internal static class DetailPanel
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.TextDisabled("COLLECTION");
-        DrawIconLabel(
-            progress.RelicOwned ? FontAwesomeIcon.Check : FontAwesomeIcon.Circle,
-            progress.RelicOwned ? ColorComplete : ColorDimmed,
-            progress.RelicOwned ? "Relic owned" : "Relic not acquired");
-        DrawIconLabel(
-            progress.ReplicaOwned ? FontAwesomeIcon.Check : FontAwesomeIcon.Circle,
-            progress.ReplicaOwned ? ColorReplica : ColorDimmed,
-            progress.ReplicaOwned ? "Replica owned" : "Replica not acquired");
+        DrawCollectionRow(
+            progress.RelicOwned,
+            ColorComplete,
+            progress.RelicOwned ? "Relic owned" : "Relic not acquired",
+            progress.RelicItemIds,
+            "Final relic weapon not tracked for this series.",
+            findItemLocation);
+        DrawCollectionRow(
+            progress.ReplicaOwned,
+            ColorReplica,
+            progress.ReplicaOwned ? "Replica owned" : "Replica not acquired",
+            progress.ReplicaItemId is { } replicaId ? [replicaId] : [],
+            "This series has no replica weapon.",
+            findItemLocation);
+    }
+
+    private static void DrawCollectionRow(
+        bool owned,
+        Vector4 ownedColor,
+        string label,
+        IReadOnlyList<uint> itemIds,
+        string untrackedNote,
+        Func<uint, ProgressReader.ItemLocation?> findItemLocation)
+    {
+        var color = owned ? ownedColor : ColorDimmed;
+
+        ImGui.BeginGroup();
+        DrawIconLabel(owned ? FontAwesomeIcon.Check : FontAwesomeIcon.Circle, color, label);
+        ImGui.EndGroup();
+
+        if (ImGui.IsItemHovered())
+            DrawLocationTooltip(owned, itemIds, untrackedNote, findItemLocation);
+    }
+
+    private static void DrawLocationTooltip(
+        bool owned,
+        IReadOnlyList<uint> itemIds,
+        string untrackedNote,
+        Func<uint, ProgressReader.ItemLocation?> findItemLocation)
+    {
+        ImGui.BeginTooltip();
+        ImGui.PushTextWrapPos(ImGui.GetFontSize() * 24f);
+        ImGui.TextDisabled("LOCATION");
+
+        if (itemIds.Count == 0)
+        {
+            ImGui.TextUnformatted(untrackedNote);
+            ImGui.PopTextWrapPos();
+            ImGui.EndTooltip();
+            return;
+        }
+
+        var located = false;
+        foreach (var id in itemIds)
+        {
+            var loc = findItemLocation(id);
+            if (loc is null) continue;
+
+            ImGui.TextUnformatted(loc.ItemName);
+            ImGui.SameLine();
+
+            if (loc.BagLabel is { } bag)
+            {
+                ImGui.TextColored(ColorComplete, $"— {bag}");
+                located = true;
+            }
+            else
+            {
+                ImGui.TextColored(ColorDimmed, "— not in a tracked location");
+            }
+        }
+
+        if (!located)
+        {
+            ImGui.Spacing();
+            ImGui.TextColored(ColorDimmed, owned
+                ? "Counted from an achievement or an earlier session. Retainer bags only report while that retainer is summoned."
+                : "Searched inventory, Armoury Chest, saddlebags, summoned retainers, Glamour Dresser, and Armoire.");
+        }
+
+        ImGui.PopTextWrapPos();
+        ImGui.EndTooltip();
     }
 
     private static void DrawItemRequirements(WeaponProgress progress, Func<uint, ProgressReader.ItemLocation?> findItemLocation)
