@@ -115,15 +115,17 @@ internal static class DetailPanel
         DrawIconLabel(owned ? FontAwesomeIcon.Check : FontAwesomeIcon.Circle, color, label);
         ImGui.EndGroup();
 
-        if (ImGui.IsItemHovered())
-            DrawLocationTooltip(owned, itemIds, untrackedNote, findItemLocation);
+        var searchId = ItemSearch.FirstId(itemIds);
+        if (ItemSearch.Row(searchId))
+            DrawLocationTooltip(owned, itemIds, untrackedNote, findItemLocation, searchId != 0);
     }
 
     private static void DrawLocationTooltip(
         bool owned,
         IReadOnlyList<uint> itemIds,
         string untrackedNote,
-        Func<uint, ProgressReader.ItemLocation?> findItemLocation)
+        Func<uint, ProgressReader.ItemLocation?> findItemLocation,
+        bool searchable)
     {
         ImGui.BeginTooltip();
         ImGui.PushTextWrapPos(ImGui.GetFontSize() * 24f);
@@ -163,6 +165,12 @@ internal static class DetailPanel
             ImGui.TextColored(ColorDimmed, owned
                 ? "Counted from an achievement or an earlier session. Retainer bags only report while that retainer is summoned."
                 : "Searched inventory, Armoury Chest, saddlebags, summoned retainers, Glamour Dresser, and Armoire.");
+        }
+
+        if (searchable)
+        {
+            ImGui.Spacing();
+            ItemSearch.Hint();
         }
 
         ImGui.PopTextWrapPos();
@@ -206,19 +214,35 @@ internal static class DetailPanel
                     ? (FontAwesomeIcon.DotCircle, ColorPartial)
                     : (FontAwesomeIcon.Times, ColorMissing);
 
+        var countText = $"×{status.Requirement.RequiredCount}";
+        var shortfall = !stepComplete && status.CurrentCount < status.Requirement.RequiredCount;
+        if (shortfall)
+            countText += $"  ({status.CurrentCount}/{status.Requirement.RequiredCount})";
+
+        ImGui.BeginGroup();
         Icons.Text(icon, color);
         ImGui.SameLine();
         ImGui.TextColored(color, status.Requirement.ItemName);
         ImGui.SameLine();
-
-        var countText = $"×{status.Requirement.RequiredCount}";
-        if (!stepComplete && status.CurrentCount < status.Requirement.RequiredCount)
-            countText += $"  ({status.CurrentCount}/{status.Requirement.RequiredCount})";
-
         ImGui.TextColored(ColorDimmed, countText);
+        ImGui.EndGroup();
 
-        if (!stepComplete && status.CurrentCount < status.Requirement.RequiredCount && ImGui.IsItemHovered())
-            ImGui.SetTooltip("Retainer inventories only count after you've summoned that retainer this session.");
+        if (!ItemSearch.Row(status.Requirement.ItemId))
+            return;
+
+        ImGui.BeginTooltip();
+        ImGui.PushTextWrapPos(ImGui.GetFontSize() * 24f);
+
+        if (shortfall)
+        {
+            ImGui.TextUnformatted("Retainer inventories only count after you've summoned that retainer this session.");
+            ImGui.Spacing();
+        }
+
+        ItemSearch.Hint();
+
+        ImGui.PopTextWrapPos();
+        ImGui.EndTooltip();
     }
 
     private static (FontAwesomeIcon Icon, Vector4 Color) StepDisplay(StepDetail detail)
@@ -249,14 +273,22 @@ internal static class DetailPanel
         ImGui.TextColored(color, detail.Step.Name);
         ImGui.EndGroup();
 
-        if (detail.IsCurrent && ImGui.IsItemHovered())
-            DrawFormsTooltip(progress, stepIndex, findItemLocation);
+        // Steps that produce no new weapon (e.g. Anima "Awoken") have nothing to search for.
+        var searchId = ItemSearch.FirstId(detail.Step.CompletionItemIds);
+        if (!ItemSearch.Row(searchId))
+            return;
+
+        if (detail.IsCurrent)
+            DrawFormsTooltip(progress, stepIndex, findItemLocation, searchId != 0);
+        else if (searchId != 0)
+            ItemSearch.HintTooltip();
     }
 
     private static void DrawFormsTooltip(
         WeaponProgress progress,
         int currentStepIndex,
-        Func<uint, ProgressReader.ItemLocation?> findItemLocation)
+        Func<uint, ProgressReader.ItemLocation?> findItemLocation,
+        bool searchable)
     {
         ImGui.BeginTooltip();
         ImGui.TextDisabled("FORMS");
@@ -264,6 +296,11 @@ internal static class DetailPanel
         if (progress.Forms.Count == 0)
         {
             ImGui.TextUnformatted("Weapon forms not tracked for this series.");
+            if (searchable)
+            {
+                ImGui.Spacing();
+                ItemSearch.Hint();
+            }
             ImGui.EndTooltip();
             return;
         }
@@ -324,6 +361,12 @@ internal static class DetailPanel
             {
                 ImGui.TextColored(ColorDimmed, "— not yet acquired");
             }
+        }
+
+        if (searchable)
+        {
+            ImGui.Spacing();
+            ItemSearch.Hint();
         }
 
         ImGui.EndTooltip();
