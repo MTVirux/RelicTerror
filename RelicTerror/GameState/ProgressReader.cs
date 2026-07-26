@@ -1,9 +1,10 @@
 using System.Collections.Generic;
 using Dalamud.Game.Inventory;
 using Lumina.Excel.Sheets;
-using CSMirage       = FFXIVClientStructs.FFXIV.Client.Game.MirageManager;
-using CSQuestManager = FFXIVClientStructs.FFXIV.Client.Game.QuestManager;
-using CSUIState      = FFXIVClientStructs.FFXIV.Client.Game.UI.UIState;
+using CSMirage          = FFXIVClientStructs.FFXIV.Client.Game.MirageManager;
+using CSQuestManager    = FFXIVClientStructs.FFXIV.Client.Game.QuestManager;
+using CSRetainerManager = FFXIVClientStructs.FFXIV.Client.Game.RetainerManager;
+using CSUIState         = FFXIVClientStructs.FFXIV.Client.Game.UI.UIState;
 
 namespace RelicTerror.GameState;
 
@@ -179,9 +180,32 @@ internal sealed class ProgressReader
             or GameInventoryType.RetainerPage4
             or GameInventoryType.RetainerPage5
             or GameInventoryType.RetainerPage6
-            or GameInventoryType.RetainerPage7   => "Retainer Inventory",
-        GameInventoryType.RetainerEquippedItems  => "Retainer (Equipped)",
+            or GameInventoryType.RetainerPage7   => RetainerLabel(equipped: false),
+        GameInventoryType.RetainerEquippedItems  => RetainerLabel(equipped: true),
         GameInventoryType.KeyItems               => "Key Items",
         _ => bag.ToString(),
     };
+
+    // Only one retainer's containers are resident at a time, so any hit in a retainer
+    // bag belongs to whichever retainer was last summoned.
+    private static string RetainerLabel(bool equipped)
+    {
+        var name = ActiveRetainerName();
+        if (name is null)
+            return equipped ? "Retainer (Equipped)" : "Retainer Inventory";
+
+        return equipped ? $"Retainer {name} (Equipped)" : $"Retainer {name}";
+    }
+
+    private static unsafe string? ActiveRetainerName()
+    {
+        var manager = CSRetainerManager.Instance();
+        if (manager == null) return null;
+
+        var retainer = manager->GetActiveRetainer();
+        if (retainer == null) return null;
+
+        var name = retainer->NameString;
+        return string.IsNullOrEmpty(name) ? null : name;
+    }
 }
