@@ -20,6 +20,8 @@ internal static class GridView
         ("CASTER",      [Job.BLM, Job.SMN, Job.RDM, Job.PCT]),
     ];
 
+    private static readonly int BodyRowCount = RoleGroups.Length + RoleGroups.Sum(g => g.Jobs.Length);
+
     private static readonly Vector4 ColorComplete   = new(0.3f,  0.85f, 0.5f,  1f);
     private static readonly Vector4 ColorReplica    = new(0.72f, 0.5f,  0.95f, 1f);
     private static readonly Vector4 ColorPartial    = new(0.98f, 0.75f, 0.15f, 1f);
@@ -40,6 +42,14 @@ internal static class GridView
         Func<(string SeriesId, Job Job), bool> isResolving,
         ref (string SeriesId, Job Job)? selectedCell)
     {
+        // Rows stretch to divide up whatever vertical space the window leaves, so the grid always
+        // ends flush with the bottom instead of trailing empty space.
+        var cellPaddingY = ImGui.GetStyle().CellPadding.Y;
+        var headerHeight = ImGui.GetTextLineHeight() + (cellPaddingY * 2f);
+        var available    = ImGui.GetContentRegionAvail().Y;
+        var exactRow     = MathF.Max(headerHeight, (available - headerHeight) / BodyRowCount);
+        var rowIndex     = 0;
+
         if (!ImGui.BeginTable("##grid", allSeries.Count + 1, ImGuiTableFlags.RowBg))
             return;
 
@@ -58,15 +68,15 @@ internal static class GridView
 
         foreach (var (roleLabel, jobs) in RoleGroups)
         {
-            ImGui.TableNextRow();
+            var cellHeight = BeginRow(ref rowIndex, exactRow, cellPaddingY);
             ImGui.TableSetColumnIndex(0);
-            CenteredTextDisabled(roleLabel);
+            CenteredTextDisabled(roleLabel, cellHeight);
 
             foreach (var job in jobs)
             {
-                ImGui.TableNextRow();
+                cellHeight = BeginRow(ref rowIndex, exactRow, cellPaddingY);
                 ImGui.TableSetColumnIndex(0);
-                CenteredTextUnformatted(useLongNames ? JobNames.Long(job) : job.ToString());
+                CenteredTextUnformatted(useLongNames ? JobNames.Long(job) : job.ToString(), cellHeight);
 
                 for (var col = 0; col < allSeries.Count; col++)
                 {
@@ -76,7 +86,7 @@ internal static class GridView
 
                     if (!series.Weapons.Any(w => w.Job == job))
                     {
-                        CenteredTextColored(ColorNA, "—");
+                        CenteredTextColored(ColorNA, "—", cellHeight);
                         continue;
                     }
 
@@ -86,7 +96,7 @@ internal static class GridView
                     ImGui.PushFont(Icons.FixedWidthFont);
                     ImGui.PushStyleColor(ImGuiCol.Text, color);
                     if (ImGui.Selectable($"{icon.ToIconString()}##{series.Id}_{job}", isSelected,
-                        ImGuiSelectableFlags.None, new Vector2(0, 0)))
+                        ImGuiSelectableFlags.None, new Vector2(0, cellHeight)))
                         selectedCell = key;
                     ImGui.PopStyleColor();
                     ImGui.PopFont();
@@ -99,6 +109,18 @@ internal static class GridView
 
         ImGui.PopStyleVar();
         ImGui.EndTable();
+    }
+
+    // Row bounds come from rounding running totals rather than each row's own height, so the
+    // leftover fraction is spread over the grid: consecutive rows differ by at most a pixel and
+    // the bottom edge follows the window continuously instead of in row-sized steps.
+    private static float BeginRow(ref int rowIndex, float exactRow, float cellPaddingY)
+    {
+        var top    = MathF.Floor(rowIndex * exactRow);
+        var bottom = MathF.Floor(++rowIndex * exactRow);
+        var height = bottom - top;
+        ImGui.TableNextRow(ImGuiTableRowFlags.None, height);
+        return height - (cellPaddingY * 2f);
     }
 
     private static void DrawCenteredHeaders(int columnCount)
@@ -118,31 +140,32 @@ internal static class GridView
         }
     }
 
-    private static void CenteredTextUnformatted(string text)
+    private static void CenteredTextUnformatted(string text, float cellHeight)
     {
-        var avail = ImGui.GetContentRegionAvail().X;
-        var width = ImGui.CalcTextSize(text).X;
-        if (width < avail)
-            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (avail - width) * 0.5f);
+        CenterCursor(text, cellHeight);
         ImGui.TextUnformatted(text);
     }
 
-    private static void CenteredTextDisabled(string text)
+    private static void CenteredTextDisabled(string text, float cellHeight)
     {
-        var avail = ImGui.GetContentRegionAvail().X;
-        var width = ImGui.CalcTextSize(text).X;
-        if (width < avail)
-            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (avail - width) * 0.5f);
+        CenterCursor(text, cellHeight);
         ImGui.TextDisabled(text);
     }
 
-    private static void CenteredTextColored(Vector4 color, string text)
+    private static void CenteredTextColored(Vector4 color, string text, float cellHeight)
+    {
+        CenterCursor(text, cellHeight);
+        ImGui.TextColored(color, text);
+    }
+
+    private static void CenterCursor(string text, float cellHeight)
     {
         var avail = ImGui.GetContentRegionAvail().X;
-        var width = ImGui.CalcTextSize(text).X;
-        if (width < avail)
-            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (avail - width) * 0.5f);
-        ImGui.TextColored(color, text);
+        var size  = ImGui.CalcTextSize(text);
+        if (size.X < avail)
+            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ((avail - size.X) * 0.5f));
+        if (size.Y < cellHeight)
+            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + ((cellHeight - size.Y) * 0.5f));
     }
 
     // Known progress always wins over the loading state - a partially complete weapon shows
