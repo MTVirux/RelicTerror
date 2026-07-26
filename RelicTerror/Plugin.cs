@@ -21,11 +21,16 @@ public sealed class Plugin : IDalamudPlugin
 
     internal static Configuration Config { get; private set; } = null!;
 
+    // Allagan Tools allocates an array per item stack per owner on every pull, and inventory
+    // events arrive in bursts, so the snapshot is refreshed at most this often.
+    private static readonly TimeSpan SnapshotInterval = TimeSpan.FromSeconds(2);
+
     private readonly IDalamudPluginInterface _pluginInterface;
     private readonly WindowSystem       _windowSystem = new("RelicTerror");
     private readonly CharacterTracker   _characterTracker;
     private readonly ProgressReader     _progressReader;
     private readonly AchievementFetcher _achievementFetcher;
+    private readonly AllaganToolsIpc    _allaganTools;
     private readonly MainWindow         _mainWindow;
     private readonly ConfigWindow       _configWindow;
     private readonly ItemTotalsWindow   _itemTotalsWindow;
@@ -47,6 +52,9 @@ public sealed class Plugin : IDalamudPlugin
     private bool _achievementHydratePending;
     private bool _achievementFetchCompleted;
 
+    private DateTime _lastSnapshotPull;
+    private bool     _snapshotRefreshSkipped;
+
     public Plugin(IDalamudPluginInterface pluginInterface)
     {
         _pluginInterface = pluginInterface;
@@ -57,10 +65,11 @@ public sealed class Plugin : IDalamudPlugin
         _progressReader     = new ProgressReader();
         _characterTracker   = new CharacterTracker(Services.ClientState);
         _achievementFetcher = new AchievementFetcher();
+        _allaganTools       = new AllaganToolsIpc();
         _achievementFetcher.ProgressUpdated += OnAchievementProgressUpdated;
         _achievementFetcher.FetchCompleted  += OnAchievementFetchCompleted;
-        _mainWindow         = new MainWindow(GetProgress, GetJournalQuestStatuses, _progressReader.FindItemLocation, IsWeaponResolving, OpenConfigUi, OpenItemTotalsUi) { IsOpen = Config.OpenOnLoad };
-        _configWindow       = new ConfigWindow(ResetFloors, SeedAchievementFetch);
+        _mainWindow         = new MainWindow(GetProgress, GetJournalQuestStatuses, GetLocationLookup, IsWeaponResolving, OpenConfigUi, OpenItemTotalsUi) { IsOpen = Config.OpenOnLoad };
+        _configWindow       = new ConfigWindow(ResetFloors, SeedAchievementFetch, () => _progressReader.CoversAllStorage);
         _itemTotalsWindow   = new ItemTotalsWindow(() => _progressCache, () => _itemCounts);
         _firstRunNotice     = new FirstRunNotice();
         _windowSystem.AddWindow(_mainWindow);
@@ -117,6 +126,9 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private IReadOnlyDictionary<(string, Job), WeaponProgress> GetProgress(ulong _) => _progressCache;
+
+    private LocationLookup GetLocationLookup() =>
+        new(_progressReader.FindItemLocation, _progressReader.CoversAllStorage);
 
     private static Dictionary<(string, Job), uint[]>? _weaponAchievementIds;
 
@@ -176,6 +188,10 @@ public sealed class Plugin : IDalamudPlugin
         // persisted high-water mark (if any). ContentId may not be loaded yet on the very
         // first Login tick — a later inventory/unlock event will rebuild and resave.
         _progressCache = TryHydrateFromPersistedFloors();
+
+        // The previous character's storage is meaningless now; force a pull past the throttle.
+        _lastSnapshotPull        = default;
+        _progressReader.Snapshot = null;
         RebuildCache();
 
         // Achievement completion is per-character; rehydrate (and maybe re-pull) for the new login.
@@ -220,6 +236,9 @@ public sealed class Plugin : IDalamudPlugin
             _achievementFetchCompleted = false;
             PersistFetchedAchievements();
         }
+
+        if (_snapshotRefreshSkipped && DateTime.UtcNow - _lastSnapshotPull >= SnapshotInterval)
+            _rebuildPending = true;
 
         if (!_rebuildPending) return;
         _rebuildPending = false;
@@ -267,13 +286,40 @@ public sealed class Plugin : IDalamudPlugin
     private void OpenConfigUi()     => _configWindow.IsOpen     = true;
     private void OpenItemTotalsUi() => _itemTotalsWindow.IsOpen = true;
 
+    // Allagan Tools sees storage the game only keeps resident while it is open, so when it answers
+    // it becomes the sole count source. Merging it with the resident scan would double-count every
+    // item both can see; it reads the same memory, so nothing is lost by preferring it outright.
+    private void RefreshInventorySnapshot()
+    {
+        var now = DateTime.UtcNow;
+        if (now - _lastSnapshotPull < SnapshotInterval)
+        {
+            // Whatever triggered this rebuild has not reached the snapshot yet, so ask for another
+            // rebuild once the throttle expires. Without this the change is simply lost until some
+            // later, unrelated event happens to rebuild outside the window.
+            _snapshotRefreshSkipped = true;
+            return;
+        }
+
+        _lastSnapshotPull       = now;
+        _snapshotRefreshSkipped = false;
+
+        _allaganTools.ResetDegraded();
+        _progressReader.Snapshot = InventorySnapshot.TryBuild(_allaganTools);
+    }
+
     private void RebuildCache()
     {
-        var itemCounts    = _progressReader.ReadItemCounts();
+        RefreshInventorySnapshot();
+
+        var snapshot      = _progressReader.Snapshot;
+        var itemCounts    = snapshot?.Counts ?? _progressReader.ReadItemCounts();
         var dresserItems  = _progressReader.ReadGlamourDresserItemIds();
         var armoireItems  = _progressReader.ReadArmoireItemIds();
         var storedItemIds = new HashSet<uint>(dresserItems);
         storedItemIds.UnionWith(armoireItems);
+        if (snapshot is not null)
+            storedItemIds.UnionWith(snapshot.StoredItemIds);
 
         var newCache = new Dictionary<(string, Job), WeaponProgress>();
 

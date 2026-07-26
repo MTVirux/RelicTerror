@@ -11,12 +11,17 @@ internal sealed class ConfigWindow : IDisposable
 
     private readonly Action<ResetScope> _resetFloors;
     private readonly Action _refetchAchievements;
+    private readonly Func<bool> _allaganToolsConnected;
     private bool _isOpen;
 
-    internal ConfigWindow(Action<ResetScope> resetFloors, Action refetchAchievements)
+    internal ConfigWindow(
+        Action<ResetScope> resetFloors,
+        Action refetchAchievements,
+        Func<bool> allaganToolsConnected)
     {
         _resetFloors = resetFloors;
         _refetchAchievements = refetchAchievements;
+        _allaganToolsConnected = allaganToolsConnected;
     }
 
     internal bool IsOpen
@@ -76,6 +81,10 @@ internal sealed class ConfigWindow : IDisposable
 
         ImGui.Spacing();
 
+        DrawInventorySourceStatus();
+
+        ImGui.Spacing();
+
         ImGui.TextUnformatted("Achievements");
         ImGui.TextDisabled("Relic achievement completion is pulled from the server once per character\nand cached, so steps resolve without opening the in-game Achievements window.");
         if (ImGui.Button("Re-fetch now"))
@@ -98,6 +107,19 @@ internal sealed class ConfigWindow : IDisposable
         DrawDangerZone();
 
         ImGui.End();
+    }
+
+    private void DrawInventorySourceStatus()
+    {
+        var connected = _allaganToolsConnected();
+
+        ImGui.TextUnformatted("Item locations");
+        ImGui.TextColored(
+            connected ? new Vector4(0.3f, 0.85f, 0.5f, 1f) : new Vector4(0.45f, 0.45f, 0.45f, 1f),
+            connected ? "Allagan Tools connected" : "Allagan Tools not detected");
+        ImGui.TextDisabled(connected
+            ? "Locations and item counts cover your retainers, Free Company chest and\nhousing storerooms without summoning or opening them."
+            : "Falling back to inventories the game keeps loaded. Retainer bags only report\nwhile that retainer is summoned. Install Allagan Tools to search them all.");
     }
 
     private void DrawDangerZone()

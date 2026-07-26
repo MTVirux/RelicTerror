@@ -15,14 +15,14 @@ internal sealed class MainWindow : Window, IDisposable
 {
     private readonly Func<ulong, IReadOnlyDictionary<(string, Job), WeaponProgress>> _getProgress;
     private readonly Func<string, IReadOnlyList<JournalQuestStatus>>                 _getJournalQuestStatuses;
-    private readonly Func<uint, ProgressReader.ItemLocation?>                       _findItemLocation;
+    private readonly Func<LocationLookup>                                          _getLocationLookup;
     private readonly Func<(string SeriesId, Job Job), bool>                        _isResolving;
     private (string SeriesId, Job Job)? _selectedCell;
 
     internal MainWindow(
         Func<ulong, IReadOnlyDictionary<(string, Job), WeaponProgress>> getProgress,
         Func<string, IReadOnlyList<JournalQuestStatus>> getJournalQuestStatuses,
-        Func<uint, ProgressReader.ItemLocation?> findItemLocation,
+        Func<LocationLookup> getLocationLookup,
         Func<(string SeriesId, Job Job), bool> isResolving,
         Action openConfig,
         Action openItemTotals)
@@ -30,7 +30,7 @@ internal sealed class MainWindow : Window, IDisposable
     {
         _getProgress             = getProgress;
         _getJournalQuestStatuses = getJournalQuestStatuses;
-        _findItemLocation        = findItemLocation;
+        _getLocationLookup       = getLocationLookup;
         _isResolving             = isResolving;
         _selectedCell            = Plugin.Config.SelectedCell;
 
@@ -74,7 +74,7 @@ internal sealed class MainWindow : Window, IDisposable
 
         ImGui.BeginChild("##detailpanel", new Vector2(0, 0), false);
         if (_selectedCell.HasValue && weapons.TryGetValue(_selectedCell.Value, out var progress))
-            DetailPanel.Draw(_selectedCell.Value, progress, _getJournalQuestStatuses(_selectedCell.Value.SeriesId), _findItemLocation);
+            DetailPanel.Draw(_selectedCell.Value, progress, _getJournalQuestStatuses(_selectedCell.Value.SeriesId), _getLocationLookup());
         else
             ImGui.TextDisabled("Select a cell to see details.");
         ImGui.EndChild();

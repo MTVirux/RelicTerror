@@ -9,6 +9,15 @@ using RelicTerror.State;
 
 namespace RelicTerror.UI;
 
+/// <summary>
+/// Item lookup plus how much storage it can actually see. <paramref name="CoversAllStorage"/> is
+/// false when only resident game memory is readable, which is what the summon-your-retainer
+/// caveats exist to explain - with Allagan Tools answering they would be wrong.
+/// </summary>
+internal sealed record LocationLookup(
+    Func<uint, ProgressReader.ItemLocation?> Find,
+    bool CoversAllStorage);
+
 internal static class DetailPanel
 {
     private static readonly Vector4 ColorComplete = new(0.3f,  0.85f, 0.5f,  1f);
@@ -22,7 +31,7 @@ internal static class DetailPanel
         (string SeriesId, Job Job) cell,
         WeaponProgress progress,
         IReadOnlyList<JournalQuestStatus> journalQuests,
-        Func<uint, ProgressReader.ItemLocation?> findItemLocation)
+        LocationLookup lookup)
     {
         ImGui.TextColored(ColorCurrent, $"{cell.Job} — {cell.SeriesId} Weapon");
         ImGui.Separator();
@@ -41,13 +50,13 @@ internal static class DetailPanel
         var halfWidth = ImGui.GetContentRegionAvail().X * 0.48f;
 
         ImGui.BeginChild("##steps", new Vector2(halfWidth, 0), false);
-        DrawStepList(progress, findItemLocation);
+        DrawStepList(progress, lookup);
         ImGui.EndChild();
 
         ImGui.SameLine();
 
         ImGui.BeginChild("##items", new Vector2(0, 0), false);
-        DrawItemRequirements(progress, findItemLocation);
+        DrawItemRequirements(progress, lookup);
         ImGui.EndChild();
 
         ImGui.EndChild();
@@ -68,7 +77,7 @@ internal static class DetailPanel
         }
     }
 
-    private static void DrawStepList(WeaponProgress progress, Func<uint, ProgressReader.ItemLocation?> findItemLocation)
+    private static void DrawStepList(WeaponProgress progress, LocationLookup lookup)
     {
         ImGui.TextDisabled("STEPS");
 
@@ -80,7 +89,7 @@ internal static class DetailPanel
         ImGui.Spacing();
 
         for (var i = 0; i < progress.Steps.Count; i++)
-            DrawStepRow(progress, i, findItemLocation);
+            DrawStepRow(progress, i, lookup);
 
         ImGui.Spacing();
         ImGui.Separator();
@@ -91,14 +100,14 @@ internal static class DetailPanel
             progress.RelicOwned ? "Relic owned" : "Relic not acquired",
             progress.RelicItemIds,
             "Final relic weapon not tracked for this series.",
-            findItemLocation);
+            lookup);
         DrawCollectionRow(
             progress.ReplicaOwned,
             ColorReplica,
             progress.ReplicaOwned ? "Replica owned" : "Replica not acquired",
             progress.ReplicaItemId is { } replicaId ? [replicaId] : [],
             "This series has no replica weapon.",
-            findItemLocation);
+            lookup);
     }
 
     private static void DrawCollectionRow(
@@ -107,7 +116,7 @@ internal static class DetailPanel
         string label,
         IReadOnlyList<uint> itemIds,
         string untrackedNote,
-        Func<uint, ProgressReader.ItemLocation?> findItemLocation)
+        LocationLookup lookup)
     {
         var color = owned ? ownedColor : ColorDimmed;
 
@@ -117,14 +126,14 @@ internal static class DetailPanel
 
         var searchId = ItemSearch.FirstId(itemIds);
         if (ItemSearch.Row(searchId))
-            DrawLocationTooltip(owned, itemIds, untrackedNote, findItemLocation, searchId != 0);
+            DrawLocationTooltip(owned, itemIds, untrackedNote, lookup, searchId != 0);
     }
 
     private static void DrawLocationTooltip(
         bool owned,
         IReadOnlyList<uint> itemIds,
         string untrackedNote,
-        Func<uint, ProgressReader.ItemLocation?> findItemLocation,
+        LocationLookup lookup,
         bool searchable)
     {
         ImGui.BeginTooltip();
@@ -142,29 +151,29 @@ internal static class DetailPanel
         var located = false;
         foreach (var id in itemIds)
         {
-            var loc = findItemLocation(id);
+            var loc = lookup.Find(id);
             if (loc is null) continue;
 
             ImGui.TextUnformatted(loc.ItemName);
-            ImGui.SameLine();
 
-            if (loc.BagLabel is { } bag)
+            if (loc.Placements.Count == 0)
             {
-                ImGui.TextColored(ColorComplete, $"— {bag}");
-                located = true;
+                ImGui.SameLine();
+                ImGui.TextColored(ColorDimmed, "- not in a tracked location");
+                continue;
             }
-            else
-            {
-                ImGui.TextColored(ColorDimmed, "— not in a tracked location");
-            }
+
+            located = true;
+            ImGui.Indent();
+            foreach (var placement in loc.Placements)
+                DrawPlacementRow(placement);
+            ImGui.Unindent();
         }
 
         if (!located)
         {
             ImGui.Spacing();
-            ImGui.TextColored(ColorDimmed, owned
-                ? "Counted from an achievement or an earlier session. Retainer bags only report while that retainer is summoned."
-                : "Searched inventory, Armoury Chest, saddlebags, summoned retainers, Glamour Dresser, and Armoire.");
+            ImGui.TextColored(ColorDimmed, NotFoundNote(owned, lookup.CoversAllStorage));
         }
 
         if (searchable)
@@ -177,14 +186,32 @@ internal static class DetailPanel
         ImGui.EndTooltip();
     }
 
-    private static void DrawItemRequirements(WeaponProgress progress, Func<uint, ProgressReader.ItemLocation?> findItemLocation)
+    private static void DrawPlacementRow(ProgressReader.ItemPlacement placement)
+    {
+        ImGui.TextColored(ColorComplete, placement.Label);
+
+        if (placement.Quantity <= 1) return;
+
+        ImGui.SameLine();
+        ImGui.TextColored(ColorDimmed, $"x{placement.Quantity}");
+    }
+
+    private static string NotFoundNote(bool owned, bool coversAllStorage) => (owned, coversAllStorage) switch
+    {
+        (true,  true)  => "Counted from an achievement or an earlier session - it is no longer in any storage Allagan Tools tracks.",
+        (true,  false) => "Counted from an achievement or an earlier session. Retainer bags only report while that retainer is summoned.",
+        (false, true)  => "Searched every character, retainer, Free Company and housing container Allagan Tools tracks.",
+        (false, false) => "Searched inventory, Armoury Chest, saddlebags, summoned retainers, Glamour Dresser, and Armoire.",
+    };
+
+    private static void DrawItemRequirements(WeaponProgress progress, LocationLookup lookup)
     {
         ImGui.TextDisabled("ITEMS");
 
         for (var i = 0; i < progress.Steps.Count; i++)
         {
             var detail = progress.Steps[i];
-            DrawStepRow(progress, i, findItemLocation);
+            DrawStepRow(progress, i, lookup);
 
             ImGui.Indent();
 
@@ -197,14 +224,14 @@ internal static class DetailPanel
             }
 
             foreach (var status in detail.ItemStatuses)
-                DrawItemStatusRow(status, detail.IsComplete);
+                DrawItemStatusRow(status, detail.IsComplete, lookup);
 
             ImGui.Unindent();
             ImGui.Spacing();
         }
     }
 
-    private static void DrawItemStatusRow(StepItemStatus status, bool stepComplete)
+    private static void DrawItemStatusRow(StepItemStatus status, bool stepComplete, LocationLookup lookup)
     {
         var (icon, color) = stepComplete
             ? (FontAwesomeIcon.Check, ColorDimmed)
@@ -233,7 +260,16 @@ internal static class DetailPanel
         ImGui.BeginTooltip();
         ImGui.PushTextWrapPos(ImGui.GetFontSize() * 24f);
 
-        if (shortfall)
+        var location = lookup.Find(status.Requirement.ItemId);
+        if (location is { Placements.Count: > 0 })
+        {
+            ImGui.TextDisabled("LOCATION");
+            foreach (var placement in location.Placements)
+                DrawPlacementRow(placement);
+            ImGui.Spacing();
+        }
+
+        if (shortfall && !lookup.CoversAllStorage)
         {
             ImGui.TextUnformatted("Retainer inventories only count after you've summoned that retainer this session.");
             ImGui.Spacing();
@@ -262,7 +298,7 @@ internal static class DetailPanel
     private static void DrawStepRow(
         WeaponProgress progress,
         int stepIndex,
-        Func<uint, ProgressReader.ItemLocation?> findItemLocation)
+        LocationLookup lookup)
     {
         var detail = progress.Steps[stepIndex];
         var (icon, color) = StepDisplay(detail);
@@ -279,7 +315,7 @@ internal static class DetailPanel
             return;
 
         if (detail.IsCurrent)
-            DrawFormsTooltip(progress, stepIndex, findItemLocation, searchId != 0);
+            DrawFormsTooltip(progress, stepIndex, lookup, searchable: searchId != 0);
         else if (searchId != 0)
             ItemSearch.HintTooltip();
     }
@@ -287,7 +323,7 @@ internal static class DetailPanel
     private static void DrawFormsTooltip(
         WeaponProgress progress,
         int currentStepIndex,
-        Func<uint, ProgressReader.ItemLocation?> findItemLocation,
+        LocationLookup lookup,
         bool searchable)
     {
         ImGui.BeginTooltip();
@@ -317,8 +353,13 @@ internal static class DetailPanel
             var labels = new List<string>(form.ItemIds.Count);
             foreach (var id in form.ItemIds)
             {
-                var loc = findItemLocation(id);
-                if (loc?.BagLabel is { } bag) labels.Add(bag);
+                var loc = lookup.Find(id);
+                if (loc is null) continue;
+
+                // A form can list several item ids that all resolve to one place; name it once.
+                foreach (var placement in loc.Placements)
+                    if (!labels.Contains(placement.Label))
+                        labels.Add(placement.Label);
             }
 
             if (labels.Count == 0) continue;

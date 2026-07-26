@@ -127,7 +127,22 @@ internal sealed class ProgressReader
         return map;
     }
 
-    internal sealed record ItemLocation(string ItemName, string? BagLabel);
+    /// <summary>Where one item sits, and how much of it is there.</summary>
+    internal sealed record ItemPlacement(string Label, int Quantity, StorageCategory Category);
+
+    internal sealed record ItemLocation(string ItemName, IReadOnlyList<ItemPlacement> Placements);
+
+    /// <summary>
+    /// Allagan Tools' view of the active character's storage, refreshed by the plugin's rebuild
+    /// loop. Null means it is unavailable and lookups fall back to scanning resident game memory.
+    /// </summary>
+    internal InventorySnapshot? Snapshot { get; set; }
+
+    /// <summary>
+    /// Whether lookups currently cover storage the game does not keep resident - unsummoned
+    /// retainers, the Free Company chest, housing. Drives the caveats shown in tooltips.
+    /// </summary>
+    internal bool CoversAllStorage => Snapshot is not null;
 
     internal ItemLocation? FindItemLocation(uint baseItemId)
     {
@@ -135,23 +150,82 @@ internal sealed class ProgressReader
 
         var name = ResolveItemName(baseItemId);
 
+        return new ItemLocation(name, Snapshot is { } snapshot
+            ? FromSnapshot(snapshot, baseItemId)
+            : FromResidentBags(baseItemId));
+    }
+
+    private static IReadOnlyList<ItemPlacement> FromSnapshot(InventorySnapshot snapshot, uint baseItemId)
+    {
+        var rows = snapshot.PlacementsFor(baseItemId);
+        if (rows.Count == 0) return [];
+
+        var merged = new Dictionary<string, ItemPlacement>();
+        foreach (var row in rows)
+        {
+            var (label, category) = ContainerLabels.Describe(row.Container, row.OwnerId);
+            Accumulate(merged, label, row.Quantity, category);
+        }
+
+        return Ordered(merged);
+    }
+
+    private IReadOnlyList<ItemPlacement> FromResidentBags(uint baseItemId)
+    {
+        var merged = new Dictionary<string, ItemPlacement>();
+
         foreach (var bag in LookupBags)
         {
             foreach (var item in Services.GameInventory.GetInventoryItems(bag))
             {
-                if (item.BaseItemId == baseItemId)
-                    return new ItemLocation(name, BagLabel(bag));
+                if (item.BaseItemId != baseItemId) continue;
+                Accumulate(merged, BagLabel(bag), (int)item.Quantity, CategoryOf(bag));
             }
         }
 
+        // The dresser and armoire report membership, not quantity; both hold one of each item.
         if (ReadGlamourDresserItemIds().Contains(baseItemId))
-            return new ItemLocation(name, "Glamour Dresser");
+            Accumulate(merged, "Glamour Dresser", 1, StorageCategory.Personal);
 
         if (ReadArmoireItemIds().Contains(baseItemId))
-            return new ItemLocation(name, "Armoire");
+            Accumulate(merged, "Armoire", 1, StorageCategory.Personal);
 
-        return new ItemLocation(name, null);
+        return Ordered(merged);
     }
+
+    // Several stacks routinely share one label (four inventory pages all read as "Inventory"), so
+    // they collapse into a single line carrying the total.
+    private static void Accumulate(
+        Dictionary<string, ItemPlacement> merged, string label, int quantity, StorageCategory category)
+    {
+        merged[label] = merged.TryGetValue(label, out var existing)
+            ? existing with { Quantity = existing.Quantity + quantity }
+            : new ItemPlacement(label, quantity, category);
+    }
+
+    private static IReadOnlyList<ItemPlacement> Ordered(Dictionary<string, ItemPlacement> merged)
+    {
+        var ordered = new List<ItemPlacement>(merged.Values);
+        ordered.Sort(static (a, b) =>
+        {
+            var byCategory = a.Category.CompareTo(b.Category);
+            return byCategory != 0 ? byCategory : string.CompareOrdinal(a.Label, b.Label);
+        });
+        return ordered;
+    }
+
+    private static StorageCategory CategoryOf(GameInventoryType bag) => bag switch
+    {
+        GameInventoryType.RetainerPage1
+            or GameInventoryType.RetainerPage2
+            or GameInventoryType.RetainerPage3
+            or GameInventoryType.RetainerPage4
+            or GameInventoryType.RetainerPage5
+            or GameInventoryType.RetainerPage6
+            or GameInventoryType.RetainerPage7
+            or GameInventoryType.RetainerEquippedItems => StorageCategory.Retainer,
+        _ => StorageCategory.Personal,
+    };
 
     private static string ResolveItemName(uint itemId)
     {
