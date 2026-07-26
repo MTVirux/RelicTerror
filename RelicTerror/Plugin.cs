@@ -25,6 +25,10 @@ public sealed class Plugin : IDalamudPlugin
     // events arrive in bursts, so the snapshot is refreshed at most this often.
     private static readonly TimeSpan SnapshotInterval = TimeSpan.FromSeconds(2);
 
+    // Whether Allagan Tools is there at all is a single bool call, cheap enough to ask on its own
+    // cadence rather than only when a pull happens to run.
+    private static readonly TimeSpan AvailabilityInterval = TimeSpan.FromSeconds(1);
+
     private readonly IDalamudPluginInterface _pluginInterface;
     private readonly WindowSystem       _windowSystem = new("RelicTerror");
     private readonly CharacterTracker   _characterTracker;
@@ -55,6 +59,9 @@ public sealed class Plugin : IDalamudPlugin
     private DateTime _lastSnapshotPull;
     private bool     _snapshotRefreshSkipped;
 
+    private DateTime _lastAvailabilityCheck;
+    private bool     _allaganToolsAvailable;
+
     public Plugin(IDalamudPluginInterface pluginInterface)
     {
         _pluginInterface = pluginInterface;
@@ -68,8 +75,8 @@ public sealed class Plugin : IDalamudPlugin
         _allaganTools       = new AllaganToolsIpc();
         _achievementFetcher.ProgressUpdated += OnAchievementProgressUpdated;
         _achievementFetcher.FetchCompleted  += OnAchievementFetchCompleted;
-        _mainWindow         = new MainWindow(GetProgress, GetJournalQuestStatuses, GetLocationLookup, IsWeaponResolving, () => _progressReader.CoversAllStorage, OpenConfigUi, OpenItemTotalsUi) { IsOpen = Config.OpenOnLoad };
-        _configWindow       = new ConfigWindow(ResetFloors, SeedAchievementFetch, () => _progressReader.CoversAllStorage);
+        _mainWindow         = new MainWindow(GetProgress, GetJournalQuestStatuses, GetLocationLookup, IsWeaponResolving, () => _allaganToolsAvailable, OpenConfigUi, OpenItemTotalsUi) { IsOpen = Config.OpenOnLoad };
+        _configWindow       = new ConfigWindow(ResetFloors, SeedAchievementFetch, () => _allaganToolsAvailable);
         _itemTotalsWindow   = new ItemTotalsWindow(() => _progressCache, () => _itemCounts);
         _firstRunNotice     = new FirstRunNotice();
         _windowSystem.AddWindow(_mainWindow);
@@ -237,6 +244,8 @@ public sealed class Plugin : IDalamudPlugin
             PersistFetchedAchievements();
         }
 
+        PollAllaganTools();
+
         if (_snapshotRefreshSkipped && DateTime.UtcNow - _lastSnapshotPull >= SnapshotInterval)
             _rebuildPending = true;
 
@@ -285,6 +294,28 @@ public sealed class Plugin : IDalamudPlugin
     private void OpenMainUi()       => _mainWindow.IsOpen       = true;
     private void OpenConfigUi()     => _configWindow.IsOpen     = true;
     private void OpenItemTotalsUi() => _itemTotalsWindow.IsOpen = true;
+
+    // Allagan Tools can be installed, enabled or unloaded at any point in a session, including
+    // after RelicTerror itself has loaded, so its presence is polled rather than inferred from the
+    // last pull. Either direction invalidates the counts: they must start coming from it, or go
+    // back to the resident scan.
+    private void PollAllaganTools()
+    {
+        var now = DateTime.UtcNow;
+        if (now - _lastAvailabilityCheck < AvailabilityInterval) return;
+        _lastAvailabilityCheck = now;
+
+        var available = _allaganTools.Probe();
+        if (available == _allaganToolsAvailable) return;
+
+        _allaganToolsAvailable = available;
+
+        // Its view of storage left with it; nulling the snapshot here rather than waiting for the
+        // rebuild keeps the fallback from serving counts read through a plugin that is now gone.
+        if (!available) _progressReader.Snapshot = null;
+
+        _rebuildPending = true;
+    }
 
     // Allagan Tools sees storage the game only keeps resident while it is open, so when it answers
     // it becomes the sole count source. Merging it with the resident scan would double-count every

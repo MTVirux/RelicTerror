@@ -40,6 +40,23 @@ internal sealed class AllaganToolsIpc
 
     internal bool IsAvailable => Invoke(_isInitialized.InvokeFunc, false);
 
+    /// <summary>
+    /// The gate on its own, outside a pull. It ignores the degraded latch so Allagan Tools being
+    /// enabled after a failed read is noticed rather than staying written off, and it stays out of
+    /// the log because the caller repeats it on a timer.
+    /// </summary>
+    internal bool Probe()
+    {
+        try
+        {
+            return _isInitialized.InvokeFunc();
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
     internal ulong CurrentCharacter() => Invoke(_currentCharacter.InvokeFunc, 0UL);
 
     /// <summary>
