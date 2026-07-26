@@ -16,18 +16,21 @@ internal sealed class MainWindow : Window, IDisposable
     private readonly Func<ulong, IReadOnlyDictionary<(string, Job), WeaponProgress>> _getProgress;
     private readonly Func<string, IReadOnlyList<JournalQuestStatus>>                 _getJournalQuestStatuses;
     private readonly Func<uint, ProgressReader.ItemLocation?>                       _findItemLocation;
+    private readonly Func<(string SeriesId, Job Job), bool>                        _isResolving;
     private (string SeriesId, Job Job)? _selectedCell;
 
     internal MainWindow(
         Func<ulong, IReadOnlyDictionary<(string, Job), WeaponProgress>> getProgress,
         Func<string, IReadOnlyList<JournalQuestStatus>> getJournalQuestStatuses,
         Func<uint, ProgressReader.ItemLocation?> findItemLocation,
+        Func<(string SeriesId, Job Job), bool> isResolving,
         Action openConfig)
         : base("RelicTerror")
     {
         _getProgress             = getProgress;
         _getJournalQuestStatuses = getJournalQuestStatuses;
         _findItemLocation        = findItemLocation;
+        _isResolving             = isResolving;
         _selectedCell            = Plugin.Config.SelectedCell;
 
         Size          = new Vector2(720, 520);
@@ -55,7 +58,7 @@ internal sealed class MainWindow : Window, IDisposable
 
         var gridWidth = ImGui.GetContentRegionAvail().X * 0.42f;
         ImGui.BeginChild("##gridpanel", new Vector2(gridWidth, 0), false);
-        GridView.Draw(RelicDatabase.AllSeries, weapons, ref _selectedCell);
+        GridView.Draw(RelicDatabase.AllSeries, weapons, _isResolving, ref _selectedCell);
         ImGui.EndChild();
 
         ImGui.SameLine();

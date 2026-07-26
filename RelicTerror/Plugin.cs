@@ -54,7 +54,7 @@ public sealed class Plugin : IDalamudPlugin
         _achievementFetcher = new AchievementFetcher();
         _achievementFetcher.ProgressUpdated += OnAchievementProgressUpdated;
         _achievementFetcher.FetchCompleted  += OnAchievementFetchCompleted;
-        _mainWindow         = new MainWindow(GetProgress, GetJournalQuestStatuses, _progressReader.FindItemLocation, OpenConfigUi) { IsOpen = Config.OpenOnLoad };
+        _mainWindow         = new MainWindow(GetProgress, GetJournalQuestStatuses, _progressReader.FindItemLocation, IsWeaponResolving, OpenConfigUi) { IsOpen = Config.OpenOnLoad };
         _configWindow       = new ConfigWindow(ResetFloors, SeedAchievementFetch);
         _firstRunNotice     = new FirstRunNotice();
         _windowSystem.AddWindow(_mainWindow);
@@ -110,6 +110,42 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private IReadOnlyDictionary<(string, Job), WeaponProgress> GetProgress(ulong _) => _progressCache;
+
+    private static Dictionary<(string, Job), uint[]>? _weaponAchievementIds;
+
+    private static Dictionary<(string, Job), uint[]> WeaponAchievementIds
+    {
+        get
+        {
+            if (_weaponAchievementIds is not null) return _weaponAchievementIds;
+
+            _weaponAchievementIds = [];
+            foreach (var series in RelicDatabase.AllSeries)
+            foreach (var weapon in series.Weapons)
+            {
+                var ids = weapon.Steps
+                    .Where(s => s.CompletionQuestId is null && s.AchievementId is not null)
+                    .Select(s => s.AchievementId!.Value)
+                    .Distinct()
+                    .ToArray();
+                if (ids.Length > 0) _weaponAchievementIds[(series.Id, weapon.Job)] = ids;
+            }
+            return _weaponAchievementIds;
+        }
+    }
+
+    // A cell's status is still resolving while any achievement it depends on is awaiting its
+    // server round-trip. Steps with a CompletionQuestId never consult achievements, so they
+    // are excluded - their quest flags are memory-resident and answer immediately.
+    private bool IsWeaponResolving((string SeriesId, Job Job) cell)
+    {
+        if (!WeaponAchievementIds.TryGetValue(cell, out var ids)) return false;
+
+        foreach (var id in ids)
+            if (_achievementFetcher.IsAwaiting(id)) return true;
+
+        return false;
+    }
 
     private IReadOnlyList<JournalQuestStatus> GetJournalQuestStatuses(string seriesId)
     {

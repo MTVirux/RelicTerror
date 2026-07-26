@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -24,10 +25,19 @@ internal static class GridView
     private static readonly Vector4 ColorPartial    = new(0.98f, 0.75f, 0.15f, 1f);
     private static readonly Vector4 ColorNotStarted = new(0.5f,  0.5f,  0.5f,  1f);
     private static readonly Vector4 ColorNA         = new(0.35f, 0.35f, 0.35f, 1f);
+    private static readonly Vector4 ColorLoading    = new(0.4f,  0.7f,  0.95f, 1f);
+
+    private static readonly FontAwesomeIcon[] LoadingFrames =
+    [
+        FontAwesomeIcon.HourglassStart,
+        FontAwesomeIcon.HourglassHalf,
+        FontAwesomeIcon.HourglassEnd,
+    ];
 
     internal static void Draw(
         IReadOnlyList<RelicSeries> allSeries,
         IReadOnlyDictionary<(string SeriesId, Job Job), WeaponProgress> weapons,
+        Func<(string SeriesId, Job Job), bool> isResolving,
         ref (string SeriesId, Job Job)? selectedCell)
     {
         if (!ImGui.BeginTable("##grid", allSeries.Count + 1, ImGuiTableFlags.RowBg))
@@ -70,7 +80,7 @@ internal static class GridView
                         continue;
                     }
 
-                    var (icon, color) = GetCellDisplay(weapons, key);
+                    var (icon, color, loading) = GetCellDisplay(weapons, key, isResolving);
                     var isSelected = selectedCell == key;
 
                     ImGui.PushFont(Icons.FixedWidthFont);
@@ -80,6 +90,9 @@ internal static class GridView
                         selectedCell = key;
                     ImGui.PopStyleColor();
                     ImGui.PopFont();
+
+                    if (loading && ImGui.IsItemHovered())
+                        ImGui.SetTooltip("Loading status - waiting on achievement data from the server.");
                 }
             }
         }
@@ -132,19 +145,24 @@ internal static class GridView
         ImGui.TextColored(color, text);
     }
 
-    private static (FontAwesomeIcon Icon, Vector4 Color) GetCellDisplay(
+    // Known progress always wins over the loading state - a partially complete weapon shows
+    // its real standing rather than regressing to a spinner while later steps resolve.
+    private static (FontAwesomeIcon Icon, Vector4 Color, bool Loading) GetCellDisplay(
         IReadOnlyDictionary<(string, Job), WeaponProgress> weapons,
-        (string SeriesId, Job Job) key)
+        (string SeriesId, Job Job) key,
+        Func<(string SeriesId, Job Job), bool> isResolving)
     {
-        if (!weapons.TryGetValue(key, out var progress))
-            return (FontAwesomeIcon.Circle, ColorNotStarted);
+        if (weapons.TryGetValue(key, out var progress))
+        {
+            if (progress.RelicOwned)
+                return (FontAwesomeIcon.Check, progress.ReplicaOwned ? ColorReplica : ColorComplete, false);
 
-        if (progress.RelicOwned)
-            return (FontAwesomeIcon.Check, progress.ReplicaOwned ? ColorReplica : ColorComplete);
+            if (progress.CompletedSteps > 0)
+                return (FontAwesomeIcon.DotCircle, ColorPartial, false);
+        }
 
-        if (progress.CompletedSteps > 0)
-            return (FontAwesomeIcon.DotCircle, ColorPartial);
-
-        return (FontAwesomeIcon.Circle, ColorNotStarted);
+        return isResolving(key)
+            ? (LoadingFrames[(int)(ImGui.GetTime() * 3d) % LoadingFrames.Length], ColorLoading, true)
+            : (FontAwesomeIcon.Circle, ColorNotStarted, false);
     }
 }

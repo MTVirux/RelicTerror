@@ -67,6 +67,19 @@ internal sealed unsafe class AchievementFetcher : IDisposable
         return _complete.Contains(achievementId);
     }
 
+    // True while this achievement's completion is still unknown: its round-trip is queued
+    // but hasn't landed, and neither persistence nor the game's own achievement data can
+    // answer yet. Until it resolves, IsComplete reports false for a reason we can't tell
+    // apart from "genuinely incomplete" - callers use this to render a loading state.
+    internal bool IsAwaiting(uint achievementId)
+    {
+        if (!_pending.Contains(achievementId) || _complete.Contains(achievementId))
+            return false;
+
+        var ach = CSAchievement.Instance();
+        return ach == null || !ach->IsLoaded();
+    }
+
     private void ReceiveAchievementProgressDetour(CSAchievement* self, uint id, uint current, uint max)
     {
         var drained = _pending.Remove(id) && _fetchActive && _pending.Count == 0;
