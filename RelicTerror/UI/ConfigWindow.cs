@@ -9,6 +9,8 @@ internal sealed class ConfigWindow : IDisposable
     private const string ResetCurrentPopupId = "RelicTerror.ResetCurrent";
     private const string ResetAllPopupId     = "RelicTerror.ResetAll";
 
+    private static readonly Vector4 DangerColor = new(0.95f, 0.55f, 0.55f, 1f);
+
     private readonly Action<ResetScope> _resetFloors;
     private readonly Action _refetchAchievements;
     private readonly Func<bool> _allaganToolsConnected;
@@ -43,6 +45,47 @@ internal sealed class ConfigWindow : IDisposable
             return;
         }
 
+        if (ImGui.BeginTabBar("RelicTerror.ConfigTabs"))
+        {
+            if (ImGui.BeginTabItem("Status"))
+            {
+                DrawStatusTab();
+                ImGui.EndTabItem();
+            }
+
+            if (ImGui.BeginTabItem("Look & feel"))
+            {
+                DrawLookAndFeelTab();
+                ImGui.EndTabItem();
+            }
+
+            ImGui.EndTabBar();
+        }
+
+        ImGui.End();
+    }
+
+    private void DrawStatusTab()
+    {
+        ImGui.SetNextItemOpen(true, ImGuiCond.FirstUseEver);
+        if (ImGui.CollapsingHeader("Item locations"))
+            DrawInventorySourceStatus();
+
+        if (ImGui.CollapsingHeader("Achievements"))
+            DrawAchievements();
+
+        if (ImGui.CollapsingHeader("Feedback & support"))
+            DrawFeedback();
+
+        ImGui.PushStyleColor(ImGuiCol.Text, DangerColor);
+        var dangerOpen = ImGui.CollapsingHeader("Danger zone");
+        ImGui.PopStyleColor();
+        if (dangerOpen)
+            DrawDangerZone();
+    }
+
+    private static void DrawLookAndFeelTab()
+    {
         var useLong = Plugin.Config.UseLongJobNames;
         if (ImGui.Checkbox("Use long class names", ref useLong))
         {
@@ -78,40 +121,10 @@ internal sealed class ConfigWindow : IDisposable
             Plugin.Config.OpenOnLoad = openOnLoad;
             Plugin.Config.Save();
         }
-
-        ImGui.Spacing();
-
-        DrawInventorySourceStatus();
-
-        ImGui.Spacing();
-
-        ImGui.TextUnformatted("Achievements");
-        ImGui.TextDisabled("Relic achievement completion is pulled from the server once per character\nand cached, so steps resolve without opening the in-game Achievements window.");
-        if (ImGui.Button("Re-fetch now"))
-            _refetchAchievements();
-        ImGui.SameLine();
-        ImGui.TextDisabled("(updates the cache from the server)");
-
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-
-        ImGui.TextUnformatted("Feedback & support");
-        ImGui.TextDisabled("Bug reports and suggestions are highly appreciated!");
-        SupportLinks.DrawButtons();
-
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-
-        DrawDangerZone();
-
-        ImGui.End();
     }
 
     private void DrawInventorySourceStatus()
     {
-        ImGui.TextUnformatted("Item locations");
         foreach (var integration in Integrations.All(_allaganToolsConnected()))
         {
             ImGui.TextColored(integration.Color, $"{integration.Name} {integration.State}");
@@ -119,9 +132,23 @@ internal sealed class ConfigWindow : IDisposable
         }
     }
 
+    private void DrawAchievements()
+    {
+        ImGui.TextDisabled("Relic achievement completion is pulled from the server once per character\nand cached, so steps resolve without opening the in-game Achievements window.");
+        if (ImGui.Button("Re-fetch now"))
+            _refetchAchievements();
+        ImGui.SameLine();
+        ImGui.TextDisabled("(updates the cache from the server)");
+    }
+
+    private static void DrawFeedback()
+    {
+        ImGui.TextDisabled("Bug reports and suggestions are highly appreciated!");
+        SupportLinks.DrawButtons();
+    }
+
     private void DrawDangerZone()
     {
-        ImGui.TextColored(new Vector4(0.95f, 0.55f, 0.55f, 1f), "Danger zone");
         ImGui.TextDisabled("Clears persisted relic progress. The table will rebuild from current in-game state.");
         ImGui.Spacing();
 
