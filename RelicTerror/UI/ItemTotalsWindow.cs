@@ -52,10 +52,11 @@ internal sealed class ItemTotalsWindow : Window, IDisposable
 
     private static void DrawSeries(SeriesTotals series, bool remainingOnly)
     {
-        var complete = series.WeaponsRemaining == 0;
-        var header = complete
-            ? $"{series.SeriesName} — ALL COMPLETE"
-            : $"{series.SeriesName} — {series.WeaponsRemaining}/{series.WeaponsTotal} weapons remaining";
+        var header = !remainingOnly
+            ? $"{series.SeriesName} — {series.WeaponsTotal} weapons"
+            : series.WeaponsRemaining == 0
+                ? $"{series.SeriesName} — ALL COMPLETE"
+                : $"{series.SeriesName} — {series.WeaponsRemaining}/{series.WeaponsTotal} weapons remaining";
 
         if (!ImGui.CollapsingHeader($"{header}##{series.SeriesId}"))
             return;
@@ -88,41 +89,38 @@ internal sealed class ItemTotalsWindow : Window, IDisposable
     private static void DrawTable(string seriesId, IReadOnlyList<ItemTotalRow> rows, bool remainingOnly)
     {
         const ImGuiTableFlags flags = ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp;
-        if (!ImGui.BeginTable($"##totals_{seriesId}", 4, flags))
+        if (!ImGui.BeginTable($"##totals_{seriesId}", 3, flags))
             return;
 
         var numberWidth = ImGui.CalcTextSize("00000").X;
-        ImGui.TableSetupColumn("Item",  ImGuiTableColumnFlags.WidthStretch);
-        ImGui.TableSetupColumn("Need",  ImGuiTableColumnFlags.WidthFixed, numberWidth);
-        ImGui.TableSetupColumn("Total", ImGuiTableColumnFlags.WidthFixed, numberWidth);
-        ImGui.TableSetupColumn("Have",  ImGuiTableColumnFlags.WidthFixed, numberWidth);
+        ImGui.TableSetupColumn("Item", ImGuiTableColumnFlags.WidthStretch);
+        ImGui.TableSetupColumn(remainingOnly ? "Need" : "Total", ImGuiTableColumnFlags.WidthFixed, numberWidth);
+        ImGui.TableSetupColumn("Have", ImGuiTableColumnFlags.WidthFixed, numberWidth);
         ImGui.TableHeadersRow();
 
         foreach (var row in rows)
         {
+            var target = remainingOnly ? row.Remaining : row.Total;
+
             ImGui.TableNextRow();
 
             ImGui.TableSetColumnIndex(0);
             ImGui.TextUnformatted(row.ItemName);
 
             ImGui.TableSetColumnIndex(1);
-            ImGui.TextColored(remainingOnly ? HeldColor(row) : ColorDimmed, row.Remaining.ToString());
+            ImGui.TextUnformatted(target.ToString());
 
             ImGui.TableSetColumnIndex(2);
-            ImGui.TextColored(remainingOnly ? ColorDimmed : HeldColor(row), row.Total.ToString());
-
-            ImGui.TableSetColumnIndex(3);
-            ImGui.TextColored(HeldColor(row), row.Held.ToString());
+            ImGui.TextColored(HeldColor(row.Held, target), row.Held.ToString());
         }
 
         ImGui.EndTable();
     }
 
-    private static Vector4 HeldColor(ItemTotalRow row)
+    private static Vector4 HeldColor(int held, int target)
     {
-        var target = row.Remaining > 0 ? row.Remaining : row.Total;
-        if (target == 0 || row.Held >= target) return ColorComplete;
-        return row.Held > 0 ? ColorPartial : ColorMissing;
+        if (target == 0 || held >= target) return ColorComplete;
+        return held > 0 ? ColorPartial : ColorMissing;
     }
 
     public void Dispose() { }
