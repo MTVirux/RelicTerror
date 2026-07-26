@@ -24,7 +24,8 @@ internal sealed class MainWindow : Window, IDisposable
         Func<string, IReadOnlyList<JournalQuestStatus>> getJournalQuestStatuses,
         Func<uint, ProgressReader.ItemLocation?> findItemLocation,
         Func<(string SeriesId, Job Job), bool> isResolving,
-        Action openConfig)
+        Action openConfig,
+        Action openItemTotals)
         : base("RelicTerror")
     {
         _getProgress             = getProgress;
@@ -42,6 +43,14 @@ internal sealed class MainWindow : Window, IDisposable
             IconOffset  = new Vector2(2, 2),
             Click       = m => { if (m == ImGuiMouseButton.Left) openConfig(); },
             ShowTooltip = () => ImGui.SetTooltip("Open settings"),
+        });
+
+        TitleBarButtons.Add(new TitleBarButton
+        {
+            Icon        = FontAwesomeIcon.ListUl,
+            IconOffset  = new Vector2(2, 2),
+            Click       = m => { if (m == ImGuiMouseButton.Left) openItemTotals(); },
+            ShowTooltip = () => ImGui.SetTooltip("Item totals"),
         });
     }
 

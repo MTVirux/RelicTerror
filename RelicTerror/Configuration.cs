@@ -18,6 +18,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool ExpandJournalQuests { get; set; } = true;
     public bool HideCharacterSelector { get; set; } = true;
     public bool OpenOnLoad { get; set; }
+    public bool ShowRemainingOnly { get; set; } = true;
     public int AcknowledgedNoticeVersion { get; set; }
 
     public void Save() => Services.PluginInterface.SavePluginConfig(this);

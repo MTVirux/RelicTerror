@@ -28,10 +28,15 @@ public sealed class Plugin : IDalamudPlugin
     private readonly AchievementFetcher _achievementFetcher;
     private readonly MainWindow         _mainWindow;
     private readonly ConfigWindow       _configWindow;
+    private readonly ItemTotalsWindow   _itemTotalsWindow;
     private readonly FirstRunNotice     _firstRunNotice;
 
     private IReadOnlyDictionary<(string, Job), WeaponProgress> _progressCache
         = new Dictionary<(string, Job), WeaponProgress>();
+
+    // Snapshot from the last rebuild, reused by the item-totals window so it doesn't
+    // rescan every bag each frame.
+    private IReadOnlyDictionary<uint, int> _itemCounts = new Dictionary<uint, int>();
 
     // Retainer inventories only return data while a retainer is summoned, and the load
     // fires a burst of per-slot events. Coalesce them into one rebuild on the next frame.
@@ -54,10 +59,12 @@ public sealed class Plugin : IDalamudPlugin
         _achievementFetcher = new AchievementFetcher();
         _achievementFetcher.ProgressUpdated += OnAchievementProgressUpdated;
         _achievementFetcher.FetchCompleted  += OnAchievementFetchCompleted;
-        _mainWindow         = new MainWindow(GetProgress, GetJournalQuestStatuses, _progressReader.FindItemLocation, IsWeaponResolving, OpenConfigUi) { IsOpen = Config.OpenOnLoad };
+        _mainWindow         = new MainWindow(GetProgress, GetJournalQuestStatuses, _progressReader.FindItemLocation, IsWeaponResolving, OpenConfigUi, OpenItemTotalsUi) { IsOpen = Config.OpenOnLoad };
         _configWindow       = new ConfigWindow(ResetFloors, SeedAchievementFetch);
+        _itemTotalsWindow   = new ItemTotalsWindow(() => _progressCache, () => _itemCounts);
         _firstRunNotice     = new FirstRunNotice();
         _windowSystem.AddWindow(_mainWindow);
+        _windowSystem.AddWindow(_itemTotalsWindow);
 
         Services.ClientState.Login              += OnLogin;
         Services.UnlockState.Unlock             += OnUnlock;
@@ -256,8 +263,9 @@ public sealed class Plugin : IDalamudPlugin
         else
             _mainWindow.Toggle();
     }
-    private void OpenMainUi()   => _mainWindow.IsOpen   = true;
-    private void OpenConfigUi() => _configWindow.IsOpen = true;
+    private void OpenMainUi()       => _mainWindow.IsOpen       = true;
+    private void OpenConfigUi()     => _configWindow.IsOpen     = true;
+    private void OpenItemTotalsUi() => _itemTotalsWindow.IsOpen = true;
 
     private void RebuildCache()
     {
@@ -286,6 +294,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         _progressCache = newCache;
+        _itemCounts    = itemCounts;
         PersistFloors(newCache);
     }
 
@@ -337,6 +346,7 @@ public sealed class Plugin : IDalamudPlugin
         _achievementFetcher.Dispose();
         _mainWindow.Dispose();
         _configWindow.Dispose();
+        _itemTotalsWindow.Dispose();
         _characterTracker.Dispose();
     }
 }
