@@ -268,10 +268,35 @@ internal static class DetailPanel
             return;
         }
 
-        foreach (var form in progress.Forms)
+        // A form pinned to a real bag proves every earlier form was built and upgraded away,
+        // so those steps read as completed even though their items no longer exist.
+        var confirmedIndex = -1;
+        var locations = new string?[progress.Forms.Count];
+        for (var i = 0; i < progress.Forms.Count; i++)
         {
+            var form = progress.Forms[i];
+            if (!form.Owned) continue;
+
+            var labels = new List<string>(form.ItemIds.Count);
+            foreach (var id in form.ItemIds)
+            {
+                var loc = findItemLocation(id);
+                if (loc?.BagLabel is { } bag) labels.Add(bag);
+            }
+
+            if (labels.Count == 0) continue;
+
+            locations[i] = string.Join(", ", labels);
+            if (form.StepIndex > confirmedIndex) confirmedIndex = form.StepIndex;
+        }
+
+        for (var i = 0; i < progress.Forms.Count; i++)
+        {
+            var form = progress.Forms[i];
             var isCurrent = form.StepIndex == currentStepIndex;
-            var (icon, color) = (form.Owned, isCurrent) switch
+            var upgradedAway = !form.Owned && form.StepIndex < confirmedIndex;
+
+            var (icon, color) = (form.Owned || upgradedAway, isCurrent) switch
             {
                 (true,  _)     => (FontAwesomeIcon.Check,  ColorComplete),
                 (false, true)  => (FontAwesomeIcon.Play,   ColorCurrent),
@@ -285,14 +310,11 @@ internal static class DetailPanel
 
             if (form.Owned)
             {
-                var labels = new List<string>(form.ItemIds.Count);
-                foreach (var id in form.ItemIds)
-                {
-                    var loc = findItemLocation(id);
-                    if (loc?.BagLabel is { } bag) labels.Add(bag);
-                }
-                var locText = labels.Count > 0 ? string.Join(", ", labels) : "tracked";
-                ImGui.TextColored(ColorDimmed, $"— {locText}");
+                ImGui.TextColored(ColorDimmed, $"— {locations[i] ?? "tracked"}");
+            }
+            else if (upgradedAway)
+            {
+                ImGui.TextColored(ColorDimmed, "— upgraded");
             }
             else if (isCurrent)
             {
