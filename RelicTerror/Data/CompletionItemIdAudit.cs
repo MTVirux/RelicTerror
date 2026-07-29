@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Lumina.Excel.Sheets;
 
@@ -30,10 +31,11 @@ internal static class CompletionItemIdAudit
         ["Obscurum"]  = "Obscurum",
     };
 
-    internal static void Run()
+    internal static AuditSection Collect()
     {
-        var sheet = Services.DataManager.GetExcelSheet<Item>();
-        var problems = 0;
+        var sheet    = Services.DataManager.GetExcelSheet<Item>();
+        var findings = new List<AuditFinding>();
+        var count    = 0;
 
         foreach (var series in RelicDatabase.AllSeries)
         foreach (var weapon in series.Weapons)
@@ -43,31 +45,24 @@ internal static class CompletionItemIdAudit
 
             foreach (var id in ids)
             {
+                count++;
+                var scope = $"{series.Id} {weapon.Job} {step.Name}";
+
                 if (!sheet.TryGetRow(id, out var row))
                 {
-                    Services.Log.Warning(
-                        $"[CompletionItemIdAudit] {series.Id} {weapon.Job} {step.Name}: item ID {id} does not resolve.");
-                    problems++;
+                    findings.Add(new AuditFinding(scope, $"item ID {id} does not resolve."));
                     continue;
                 }
 
-                if (StageNameTokens.TryGetValue(step.Name, out var token))
-                {
-                    var name = row.Name.ExtractText();
-                    if (name.IndexOf(token, System.StringComparison.OrdinalIgnoreCase) < 0)
-                    {
-                        Services.Log.Warning(
-                            $"[CompletionItemIdAudit] {series.Id} {weapon.Job} {step.Name}: " +
-                            $"item ID {id} resolves to \"{name}\" which does not contain \"{token}\".");
-                        problems++;
-                    }
-                }
+                if (!StageNameTokens.TryGetValue(step.Name, out var token)) continue;
+
+                var name = row.Name.ExtractText();
+                if (name.IndexOf(token, StringComparison.OrdinalIgnoreCase) < 0)
+                    findings.Add(new AuditFinding(
+                        scope, $"item ID {id} resolves to \"{name}\" which does not contain \"{token}\"."));
             }
         }
 
-        if (problems == 0)
-            Services.Log.Information("[CompletionItemIdAudit] OK — all CompletionItemIds resolved.");
-        else
-            Services.Log.Warning($"[CompletionItemIdAudit] {problems} issue(s) found. See warnings above.");
+        return new AuditSection("Item", count, findings);
     }
 }

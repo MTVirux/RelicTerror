@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Lumina.Excel.Sheets;
 
@@ -38,10 +39,11 @@ internal static class AchievementIdAudit
         ["Eureka"]    = "Eureka",
     };
 
-    internal static void Run()
+    internal static AuditSection Collect()
     {
-        var sheet = Services.DataManager.GetExcelSheet<Achievement>();
-        var problems = 0;
+        var sheet    = Services.DataManager.GetExcelSheet<Achievement>();
+        var findings = new List<AuditFinding>();
+        var count    = 0;
 
         foreach (var series in RelicDatabase.AllSeries)
         foreach (var weapon in series.Weapons)
@@ -49,31 +51,23 @@ internal static class AchievementIdAudit
         {
             if (step.AchievementId is not { } achId) continue;
 
+            count++;
+            var scope = $"{series.Id} {weapon.Job} {step.Name}";
+
             if (!sheet.TryGetRow(achId, out var row))
             {
-                Services.Log.Warning(
-                    $"[AchievementIdAudit] {series.Id} {weapon.Job} {step.Name}: " +
-                    $"achievement ID {achId} does not resolve.");
-                problems++;
+                findings.Add(new AuditFinding(scope, $"achievement ID {achId} does not resolve."));
                 continue;
             }
 
-            if (StageNameTokens.TryGetValue(step.Name, out var token))
-            {
-                var name = row.Name.ExtractText();
-                if (name.IndexOf(token, System.StringComparison.OrdinalIgnoreCase) < 0)
-                {
-                    Services.Log.Warning(
-                        $"[AchievementIdAudit] {series.Id} {weapon.Job} {step.Name}: " +
-                        $"achievement ID {achId} resolves to \"{name}\" which does not contain \"{token}\".");
-                    problems++;
-                }
-            }
+            if (!StageNameTokens.TryGetValue(step.Name, out var token)) continue;
+
+            var name = row.Name.ExtractText();
+            if (name.IndexOf(token, StringComparison.OrdinalIgnoreCase) < 0)
+                findings.Add(new AuditFinding(
+                    scope, $"achievement ID {achId} resolves to \"{name}\" which does not contain \"{token}\"."));
         }
 
-        if (problems == 0)
-            Services.Log.Information("[AchievementIdAudit] OK — all AchievementIds resolved.");
-        else
-            Services.Log.Warning($"[AchievementIdAudit] {problems} issue(s) found. See warnings above.");
+        return new AuditSection("Achievement", count, findings);
     }
 }

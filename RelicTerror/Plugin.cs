@@ -38,6 +38,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly MainWindow         _mainWindow;
     private readonly ConfigWindow       _configWindow;
     private readonly ItemTotalsWindow   _itemTotalsWindow;
+    private readonly AuditWindow        _auditWindow;
     private readonly FirstRunNotice     _firstRunNotice;
 
     private IReadOnlyDictionary<(string, Job), WeaponProgress> _progressCache
@@ -78,9 +79,11 @@ public sealed class Plugin : IDalamudPlugin
         _mainWindow         = new MainWindow(GetProgress, GetJournalQuestStatuses, GetLocationLookup, IsWeaponResolving, () => _allaganToolsAvailable, OpenConfigUi, OpenItemTotalsUi) { IsOpen = Config.OpenOnLoad };
         _configWindow       = new ConfigWindow(ResetFloors, SeedAchievementFetch, () => _allaganToolsAvailable);
         _itemTotalsWindow   = new ItemTotalsWindow(() => _progressCache, () => _itemCounts);
+        _auditWindow        = new AuditWindow(DataAudit.Run(), DataAudit.Run);
         _firstRunNotice     = new FirstRunNotice();
         _windowSystem.AddWindow(_mainWindow);
         _windowSystem.AddWindow(_itemTotalsWindow);
+        _windowSystem.AddWindow(_auditWindow);
 
         Services.ClientState.Login              += OnLogin;
         Services.UnlockState.Unlock             += OnUnlock;
@@ -88,7 +91,7 @@ public sealed class Plugin : IDalamudPlugin
         Services.Framework.Update               += OnFrameworkUpdate;
         Services.CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Open the RelicTerror tracker window. \"/rt config\" for settings, \"/rt refetch\" to re-pull achievements.",
+            HelpMessage = "Open the RelicTerror tracker window. \"/rt config\" for settings, \"/rt refetch\" to re-pull achievements, \"/rt audit\" to re-check tracked IDs against game data.",
         });
 
         pluginInterface.UiBuilder.Draw         += _windowSystem.Draw;
@@ -101,10 +104,6 @@ public sealed class Plugin : IDalamudPlugin
             RebuildCache();
 
         _achievementHydratePending = true;
-
-        CompletionItemIdAudit.Run();
-        AchievementIdAudit.Run();
-        QuestIdAudit.Run();
     }
 
     // v3: ResistanceSeries achievement order was corrected — drop any persisted floors
@@ -284,16 +283,28 @@ public sealed class Plugin : IDalamudPlugin
     private void OnCommand(string _, string args)
     {
         var arg = args.Trim();
-        if (arg.Equals("config", System.StringComparison.OrdinalIgnoreCase))
+        if (arg.Length == 0)
+            _mainWindow.Toggle();
+        else if (arg.Equals("config", System.StringComparison.OrdinalIgnoreCase))
             _configWindow.Toggle();
         else if (arg.Equals("refetch", System.StringComparison.OrdinalIgnoreCase))
             SeedAchievementFetch();
+        else if (arg.Equals("audit", System.StringComparison.OrdinalIgnoreCase))
+            OpenAuditUi();
         else
-            _mainWindow.Toggle();
+            Services.Chat.Print($"RelicTerror: unknown argument \"{arg}\". Try: config, refetch, audit.");
     }
     private void OpenMainUi()       => _mainWindow.IsOpen       = true;
     private void OpenConfigUi()     => _configWindow.IsOpen     = true;
     private void OpenItemTotalsUi() => _itemTotalsWindow.IsOpen = true;
+
+    // Re-run rather than show the load-time report: the point of asking is to see the
+    // result against game data as it stands now.
+    private void OpenAuditUi()
+    {
+        _auditWindow.Rerun();
+        _auditWindow.IsOpen = true;
+    }
 
     // Allagan Tools can be installed, enabled or unloaded at any point in a session, including
     // after RelicTerror itself has loaded, so its presence is polled rather than inferred from the
@@ -424,6 +435,7 @@ public sealed class Plugin : IDalamudPlugin
         _mainWindow.Dispose();
         _configWindow.Dispose();
         _itemTotalsWindow.Dispose();
+        _auditWindow.Dispose();
         _characterTracker.Dispose();
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using Lumina.Excel.Sheets;
 
@@ -6,37 +7,33 @@ namespace RelicTerror.Data;
 
 internal static class QuestIdAudit
 {
-    internal static void Run()
+    internal static AuditSection Collect()
     {
-        var sheet = Services.DataManager.GetExcelSheet<Quest>();
-        var problems = 0;
+        var sheet    = Services.DataManager.GetExcelSheet<Quest>();
+        var findings = new List<AuditFinding>();
+        var count    = 0;
 
         foreach (var series in RelicDatabase.AllSeries)
         {
             foreach (var q in series.JournalQuests)
             {
+                count++;
+                var scope = $"{series.Id} {q.DisplayName}";
+
                 if (!sheet.TryGetRow(q.QuestId, out var row))
                 {
-                    Services.Log.Warning(
-                        $"[QuestIdAudit] {series.Id} {q.DisplayName}: quest ID {q.QuestId} does not resolve.");
-                    problems++;
+                    findings.Add(new AuditFinding(scope, $"quest ID {q.QuestId} does not resolve."));
                     continue;
                 }
 
                 var sheetName = StripIconGlyphs(row.Name.ExtractText());
                 if (!sheetName.Equals(q.DisplayName, StringComparison.Ordinal))
-                {
-                    Services.Log.Warning(
-                        $"[QuestIdAudit] {series.Id} {q.DisplayName}: quest ID {q.QuestId} resolves to \"{sheetName}\".");
-                    problems++;
-                }
+                    findings.Add(new AuditFinding(
+                        scope, $"quest ID {q.QuestId} resolves to \"{sheetName}\"."));
 
                 if (row.IsRepeatable != q.Repeatable)
-                {
-                    Services.Log.Warning(
-                        $"[QuestIdAudit] {series.Id} {q.DisplayName}: Repeatable={q.Repeatable} but sheet says {row.IsRepeatable}.");
-                    problems++;
-                }
+                    findings.Add(new AuditFinding(
+                        scope, $"Repeatable={q.Repeatable} but sheet says {row.IsRepeatable}."));
             }
 
             foreach (var weapon in series.Weapons)
@@ -44,19 +41,15 @@ internal static class QuestIdAudit
             {
                 if (step.CompletionQuestId is not { } questId) continue;
 
+                count++;
                 if (!sheet.TryGetRow(questId, out _))
-                {
-                    Services.Log.Warning(
-                        $"[QuestIdAudit] {series.Id} {weapon.Job} {step.Name}: completion quest ID {questId} does not resolve.");
-                    problems++;
-                }
+                    findings.Add(new AuditFinding(
+                        $"{series.Id} {weapon.Job} {step.Name}",
+                        $"completion quest ID {questId} does not resolve."));
             }
         }
 
-        if (problems == 0)
-            Services.Log.Information("[QuestIdAudit] OK — all quest IDs resolved.");
-        else
-            Services.Log.Warning($"[QuestIdAudit] {problems} issue(s) found. See warnings above.");
+        return new AuditSection("Quest", count, findings);
     }
 
     // Repeatable quests carry a leading private-use-area icon glyph (U+E000-U+F8FF)
