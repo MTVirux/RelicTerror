@@ -19,6 +19,16 @@ public sealed class Plugin : IDalamudPlugin
 {
     private const string CommandName = "/rt";
 
+    // The data audit is a development aid, compiled out of Release so it neither ships to
+    // players nor logs on their loads.
+#if DEBUG
+    private const string HelpText  = "Open the RelicTerror tracker window. \"/rt config\" for settings, \"/rt refetch\" to re-pull achievements, \"/rt audit\" to re-check tracked IDs against game data.";
+    private const string KnownArgs = "config, refetch, audit";
+#else
+    private const string HelpText  = "Open the RelicTerror tracker window. \"/rt config\" for settings, \"/rt refetch\" to re-pull achievements.";
+    private const string KnownArgs = "config, refetch";
+#endif
+
     internal static Configuration Config { get; private set; } = null!;
 
     // Allagan Tools allocates an array per item stack per owner on every pull, and inventory
@@ -38,8 +48,10 @@ public sealed class Plugin : IDalamudPlugin
     private readonly MainWindow         _mainWindow;
     private readonly ConfigWindow       _configWindow;
     private readonly ItemTotalsWindow   _itemTotalsWindow;
-    private readonly AuditWindow        _auditWindow;
     private readonly FirstRunNotice     _firstRunNotice;
+#if DEBUG
+    private readonly AuditWindow        _auditWindow;
+#endif
 
     private IReadOnlyDictionary<(string, Job), WeaponProgress> _progressCache
         = new Dictionary<(string, Job), WeaponProgress>();
@@ -79,11 +91,13 @@ public sealed class Plugin : IDalamudPlugin
         _mainWindow         = new MainWindow(GetProgress, GetJournalQuestStatuses, GetLocationLookup, IsWeaponResolving, () => _allaganToolsAvailable, OpenConfigUi, OpenItemTotalsUi) { IsOpen = Config.OpenOnLoad };
         _configWindow       = new ConfigWindow(ResetFloors, SeedAchievementFetch, () => _allaganToolsAvailable);
         _itemTotalsWindow   = new ItemTotalsWindow(() => _progressCache, () => _itemCounts);
-        _auditWindow        = new AuditWindow(DataAudit.Run(), DataAudit.Run);
         _firstRunNotice     = new FirstRunNotice();
         _windowSystem.AddWindow(_mainWindow);
         _windowSystem.AddWindow(_itemTotalsWindow);
+#if DEBUG
+        _auditWindow        = new AuditWindow(DataAudit.Run(), DataAudit.Run);
         _windowSystem.AddWindow(_auditWindow);
+#endif
 
         Services.ClientState.Login              += OnLogin;
         Services.UnlockState.Unlock             += OnUnlock;
@@ -91,7 +105,7 @@ public sealed class Plugin : IDalamudPlugin
         Services.Framework.Update               += OnFrameworkUpdate;
         Services.CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Open the RelicTerror tracker window. \"/rt config\" for settings, \"/rt refetch\" to re-pull achievements, \"/rt audit\" to re-check tracked IDs against game data.",
+            HelpMessage = HelpText,
         });
 
         pluginInterface.UiBuilder.Draw         += _windowSystem.Draw;
@@ -289,15 +303,18 @@ public sealed class Plugin : IDalamudPlugin
             _configWindow.Toggle();
         else if (arg.Equals("refetch", System.StringComparison.OrdinalIgnoreCase))
             SeedAchievementFetch();
+#if DEBUG
         else if (arg.Equals("audit", System.StringComparison.OrdinalIgnoreCase))
             OpenAuditUi();
+#endif
         else
-            Services.Chat.Print($"RelicTerror: unknown argument \"{arg}\". Try: config, refetch, audit.");
+            Services.Chat.Print($"RelicTerror: unknown argument \"{arg}\". Try: {KnownArgs}.");
     }
     private void OpenMainUi()       => _mainWindow.IsOpen       = true;
     private void OpenConfigUi()     => _configWindow.IsOpen     = true;
     private void OpenItemTotalsUi() => _itemTotalsWindow.IsOpen = true;
 
+#if DEBUG
     // Re-run rather than show the load-time report: the point of asking is to see the
     // result against game data as it stands now.
     private void OpenAuditUi()
@@ -305,6 +322,7 @@ public sealed class Plugin : IDalamudPlugin
         _auditWindow.Rerun();
         _auditWindow.IsOpen = true;
     }
+#endif
 
     // Allagan Tools can be installed, enabled or unloaded at any point in a session, including
     // after RelicTerror itself has loaded, so its presence is polled rather than inferred from the
@@ -435,7 +453,9 @@ public sealed class Plugin : IDalamudPlugin
         _mainWindow.Dispose();
         _configWindow.Dispose();
         _itemTotalsWindow.Dispose();
+#if DEBUG
         _auditWindow.Dispose();
+#endif
         _characterTracker.Dispose();
     }
 }

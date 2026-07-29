@@ -1,3 +1,4 @@
+#if DEBUG
 using System;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
@@ -102,3 +103,4 @@ internal sealed class AuditWindow : Window, IDisposable
 
     public void Dispose() { }
 }
+#endif

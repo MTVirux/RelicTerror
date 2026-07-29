@@ -1,3 +1,4 @@
+#if DEBUG
 using System.Collections.Generic;
 using System.Linq;
 
@@ -18,6 +19,9 @@ internal sealed record AuditReport(IReadOnlyList<AuditSection> Sections, string 
 // Relic identifiers are hand-authored, so a patch can silently invalidate them. Each sheet
 // audit resolves what it can and returns findings rather than logging them, so the same pass
 // serves both the load-time log line and the on-demand audit window.
+//
+// Debug-only: this is a development aid, so it is compiled out of the Release builds that
+// reach players rather than running (and logging) on every load.
 internal static class DataAudit
 {
     internal static AuditReport Run()
@@ -61,3 +65,4 @@ internal static class DataAudit
         }
     }
 }
+#endif

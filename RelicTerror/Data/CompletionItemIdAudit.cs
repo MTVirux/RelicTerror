@@ -1,3 +1,4 @@
+#if DEBUG
 using System;
 using System.Collections.Generic;
 using Lumina.Excel.Sheets;
@@ -66,3 +67,4 @@ internal static class CompletionItemIdAudit
         return new AuditSection("Item", count, findings);
     }
 }
+#endif
