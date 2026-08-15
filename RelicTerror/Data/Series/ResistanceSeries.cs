@@ -22,9 +22,7 @@ internal static class ResistanceSeries
     private const uint LoathsomeMemoryOfTheDying = 32956;
 
     // Augmented Law's Order
-    private const uint HauntingMemoryOfTheDying  = 32957;
-    private const uint VexatiousMemoryOfTheDying = 32958;
-    private const uint TimewornArtifact          = 32959;
+    private const uint TimewornArtifact = 32959;
 
     // Blade's
     private const uint RawEmotion = 33767;
@@ -106,15 +104,12 @@ internal static class ResistanceSeries
             AchievementId: null,
             CompletionItemIds: StageItems(job, LawsOrderItemBase),
             Requirements: [ new(LoathsomeMemoryOfTheDying, "Loathsome Memory of the Dying", 15) ]),
+        // Haunting/Vexatious Memories are a once-per-character gate (quest 69575,
+        // "The Resistance Remembers"), not a per-weapon cost, so they are not listed here.
         new("Augmented Law's Order",
             AchievementId: AchId(LawsOrderBase, job),
             CompletionItemIds: StageItems(job, AugmentedLawsOrderItemBase),
-            Requirements:
-            [
-                new(HauntingMemoryOfTheDying,  "Haunting Memory of the Dying",  18),
-                new(VexatiousMemoryOfTheDying, "Vexatious Memory of the Dying", 18),
-                new(TimewornArtifact,          "Timeworn Artifact",             15),
-            ]),
+            Requirements: [ new(TimewornArtifact, "Timeworn Artifact", 15) ]),
         new("Blade's",
             AchievementId: AchId(BladesBase, job),
             CompletionItemIds: StageItems(job, BladesItemBase),
