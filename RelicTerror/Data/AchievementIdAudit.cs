@@ -33,6 +33,7 @@ internal static class AchievementIdAudit
         ["Penumbrae"] = "Phantastick",
         ["Umbrae"]    = "Umbra",
         ["Obscurum"]  = "Clare Obscurum",
+        ["Occultum"]  = "Cut Above the Rest",
         // Eureka
         ["Anemos"]    = "Anemos",
         ["Elemental"] = "Elemental",

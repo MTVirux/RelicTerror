@@ -27,9 +27,11 @@ internal static class CompletionItemIdAudit
         ["Majestic Manderville"] = "Majestic Manderville",
         ["Mandervillous"]     = "Mandervillous",
         // Phantom
-        ["Penumbrae"] = "Penumbrae",
-        ["Umbrae"]    = "Umbrae",
-        ["Obscurum"]  = "Obscurum",
+        ["Penumbrae"]  = "Penumbrae",
+        ["Umbrae"]     = "Umbrae",
+        ["Obscurum"]   = "Obscurum",
+        ["Eclipticum"] = "Eclipticum",
+        ["Occultum"]   = "Occultum",
     };
 
     internal static AuditSection Collect()
