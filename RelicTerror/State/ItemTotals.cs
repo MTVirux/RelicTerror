@@ -20,9 +20,8 @@ public sealed record SeriesTotals(
 public static class ItemTotals
 {
     /// <summary>
-    /// Aggregates per-series material requirements. <paramref name="progress"/> only affects
-    /// the Remaining column; Total is derived from the database alone so the window still
-    /// renders before any cache exists (fresh character, or logged out).
+    /// Aggregates per-series material requirements. Total comes from the database alone so the
+    /// window renders before any cache exists (fresh character, or logged out).
     /// </summary>
     public static IReadOnlyList<SeriesTotals> Build(
         IReadOnlyList<RelicSeries> allSeries,
@@ -49,8 +48,7 @@ public static class ItemTotals
 
                 for (var i = 0; i < weapon.Steps.Count; i++)
                 {
-                    // No cached progress means nothing is proven complete, so every step counts
-                    // toward Remaining.
+                    // No cached progress means nothing is proven complete.
                     var stepComplete = weaponProgress is not null
                         && i < weaponProgress.Steps.Count
                         && weaponProgress.Steps[i].IsComplete;

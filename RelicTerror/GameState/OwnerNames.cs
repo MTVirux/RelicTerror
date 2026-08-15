@@ -9,22 +9,18 @@ namespace RelicTerror.GameState;
 /// <summary>
 /// Puts a name to an inventory owner id.
 ///
-/// The game's retainer roster is ten fixed slots that read as zero until it has loaded this
-/// session, which <c>RetainerManager.IsReady</c> reports. Allagan Tools' inventory cache
-/// persists across sessions, so it lists retainer-held items from the moment you log in - long
-/// before the game knows any names. Reading only the roster therefore misses on exactly the
-/// lookups this feature exists to answer.
-///
-/// Allagan Tools keeps its own persisted name map, so that is the durable source. The live
-/// roster is still preferred when it is ready, so a retainer renamed this session is correct
-/// before Allagan Tools next writes its config.
+/// The retainer roster reads as zero until it has loaded this session (<c>RetainerManager.IsReady</c>),
+/// but Allagan Tools' inventory cache persists across sessions and lists retainer-held items from
+/// login - so the roster alone misses exactly the lookups this exists to answer. Allagan Tools'
+/// persisted name map is the durable source; the live roster wins when ready, so a retainer renamed
+/// this session is correct before Allagan Tools next writes its config.
 /// </summary>
 internal static class OwnerNames
 {
     private const string AllaganToolsConfig = "InventoryTools.json";
 
-    // Only ever re-read when the file's timestamp moves; this is just the floor on how often
-    // that timestamp is checked, since lookups happen per placement per frame.
+    // Re-read only when the file's timestamp moves; this floors how often that is checked, since
+    // lookups happen per placement per frame.
     private static readonly TimeSpan CheckInterval = TimeSpan.FromSeconds(30);
 
     private static Dictionary<ulong, string> _saved = [];
@@ -85,8 +81,8 @@ internal static class OwnerNames
         }
     }
 
-    // Allagan Tools' config sits beside our own in the launcher's pluginConfigs directory;
-    // deriving the path from ours keeps this working for portable and non-XIVLauncher installs.
+    // Allagan Tools' config sits beside ours in pluginConfigs; deriving the path from ours keeps
+    // this working for portable and non-XIVLauncher installs.
     private static string? ConfigPath()
     {
         var directory = Services.PluginInterface.ConfigFile.Directory?.FullName;

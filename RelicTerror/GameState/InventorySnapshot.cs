@@ -6,9 +6,8 @@ namespace RelicTerror.GameState;
 internal readonly record struct PlacementRow(int Quantity, ulong OwnerId, uint Container);
 
 /// <summary>
-/// An indexed read of every container Allagan Tools tracks for the active character - its own
-/// bags, its retainers, its Free Company and its houses. Built once per refresh and reused, since
-/// each pull allocates one array per item stack per owner.
+/// Indexed read of every container Allagan Tools tracks for the active character. Built once per
+/// refresh and reused, since each pull allocates one array per item stack per owner.
 /// </summary>
 internal sealed class InventorySnapshot
 {
@@ -19,8 +18,7 @@ internal sealed class InventorySnapshot
     private const int ContainerIndex   = 20;
     private const int OwnerIdIndex     = 23;
 
-    // Some inventory sources report high-quality entries offset by a million. Requirements are
-    // keyed on the base id, matching how ReadItemCounts uses BaseItemId.
+    // Some sources report HQ entries offset by a million; requirements are keyed on the base id.
     private const uint HqItemIdOffset = 1_000_000;
 
     private readonly Dictionary<uint, int>                _counts;
@@ -46,9 +44,9 @@ internal sealed class InventorySnapshot
         _placements.TryGetValue(itemId, out var rows) ? rows : [];
 
     /// <summary>
-    /// Reads the active character's whole storage through Allagan Tools. Returns null when it is
-    /// absent, still warming up, or reports nothing for the active character - the caller then
-    /// falls back to the in-memory scan rather than trusting a result that would zero every count.
+    /// Reads the active character's whole storage through Allagan Tools. Null when it is absent,
+    /// still warming up, or reports nothing for the active character - the caller then falls back
+    /// to the in-memory scan rather than trusting a result that would zero every count.
     /// </summary>
     internal static InventorySnapshot? TryBuild(AllaganToolsIpc ipc)
     {
@@ -96,7 +94,7 @@ internal sealed class InventorySnapshot
             var container = (uint)row[ContainerIndex];
             if (!ContainerLabels.IsCountable(container)) continue;
 
-            // Dresser and armoire entries prove ownership regardless of the quantity they report.
+            // Dresser and armoire entries prove ownership whatever quantity they report.
             if (container is ContainerLabels.ArmoireContainer or ContainerLabels.GlamourChestContainer)
                 stored.Add(itemId);
 

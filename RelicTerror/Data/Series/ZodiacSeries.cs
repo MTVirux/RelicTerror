@@ -10,7 +10,7 @@ internal static class ZodiacSeries
     // Zenith
     private const uint ThavnairianMist = 6268;
 
-    // Atma (one per astrological sign, dropped from FATEs)
+    // Atma - dropped from FATEs
     private const uint AtmaOfTheMaiden      = 7851;
     private const uint AtmaOfTheScorpion    = 7852;
     private const uint AtmaOfTheWaterBearer = 7853;
@@ -28,17 +28,17 @@ internal static class ZodiacSeries
     private const uint SuperiorEnchantedInk = 7885;
     private const uint Alexandrite          = 7883;
 
-    // Zodiac Braves — purchased items (1× each, 100,000 gil each)
+    // Zodiac Braves - purchased items (1x each, 100,000 gil each)
     private const uint BronzeLakeCrystal = 9538;
     private const uint AllaganResin      = 9542;
     private const uint FuriteSand        = 9543;
     private const uint BrassKettle       = 9544;
 
-    // Zodiac Braves — required per sub-quest (×4 sub-quests = 4 total)
+    // Zodiac Braves - one per sub-quest, 4 sub-quests
     private const uint BombardCore       = 9539;
     private const uint SacredSpringWater = 9540;
 
-    // Zodiac Braves — crafted HQ items (1× each)
+    // Zodiac Braves - crafted HQ items
     private const uint PerfectFirewood  = 9511;
     private const uint FurnaceRing      = 9510;
     private const uint PerfectPestle    = 9513;
@@ -48,7 +48,7 @@ internal static class ZodiacSeries
     private const uint PerfectCloth     = 9517;
     private const uint TailorMadeEelPie = 9516;
 
-    // Sword-line job order — offset within each per-stage contiguous block.
+    // Sword-line job order - offset within each per-stage contiguous block.
     // Holy Shield (PLD shield) sits at +9 from sword PLD in every block; NIN is non-contiguous.
     private static readonly Job[] SwordOrder =
     [
@@ -82,9 +82,7 @@ internal static class ZodiacSeries
             : [baseId + off];
     }
 
-    // Per-job "A Relic Reborn (<weapon>)" quests — completed once per job, so quest
-    // completion is an exact per-job marker for the base stage. Verified 2026-07-17
-    // against the Quest sheet.
+    // Completed once per job, so quest completion is an exact per-job marker for the base stage.
     private static readonly Dictionary<Job, uint> RelicRebornQuests = new()
     {
         [Job.WAR] = 66655, // Bravura
@@ -106,14 +104,10 @@ internal static class ZodiacSeries
             CompletionItemIds: null,
             Requirements: [],
             CompletionQuestId: RelicRebornQuests[job]),
-        // No in-game achievement exists for this stage (verified 2026-05-18 against Achievement.csv).
-        // Identification falls back to CompletionItemIds.
         new("Zenith",
             AchievementId: null,
             CompletionItemIds: StageItems(job, ZenithBase, NinZenith),
             Requirements: [ new(ThavnairianMist, "Thavnairian Mist", 3) ]),
-        // No in-game achievement exists for this stage (verified 2026-05-18 against Achievement.csv).
-        // Identification falls back to CompletionItemIds.
         new("Atma",
             AchievementId: null,
             CompletionItemIds: StageItems(job, AtmaBase, NinAtma),
@@ -134,14 +128,10 @@ internal static class ZodiacSeries
             ]),
         // Animus requires completing job-specific Trials of the Braves books;
         // those are quest key items without standard inventory IDs.
-        // Only a generic single-weapon achievement exists ("Taking It to the Stars", id 925);
-        // no per-job achievement exists, so identification falls back to CompletionItemIds.
         new("Animus",
             AchievementId: null,
             CompletionItemIds: StageItems(job, AnimusBase, NinAnimus),
             Requirements: []),
-        // Only a generic single-weapon achievement exists ("A Star Is Born", id 926);
-        // no per-job achievement exists, so identification falls back to CompletionItemIds.
         new("Novus",
             AchievementId: null,
             CompletionItemIds: StageItems(job, NovusBase, NinNovus),
@@ -151,14 +141,10 @@ internal static class ZodiacSeries
                 new(Alexandrite,          "Alexandrite",            75),
             ]),
         // Nexus is light-farming; no items to track.
-        // Only a generic single-weapon achievement exists ("Inspire the Nexus", id 1028);
-        // no per-job achievement exists, so identification falls back to CompletionItemIds.
         new("Nexus",
             AchievementId: null,
             CompletionItemIds: StageItems(job, NexusBase, NinNexus),
             Requirements: []),
-        // Only a generic single-weapon achievement exists ("Lethal Weapon", id 1054);
-        // no per-job achievement exists, so identification falls back to CompletionItemIds.
         new("Zodiac Braves",
             AchievementId: null,
             CompletionItemIds: StageItems(job, BravesBase, NinBraves),
@@ -181,8 +167,6 @@ internal static class ZodiacSeries
             ]),
         // Zeta requires 12 Mahatma key items obtained from Remon;
         // these are quest key items without standard inventory IDs.
-        // Only a generic single-weapon achievement exists ("The Letter Z", id 1081);
-        // no per-job achievement exists, so identification falls back to CompletionItemIds.
         new("Zeta",
             AchievementId: null,
             CompletionItemIds: StageItems(job, ZetaBase, NinZeta),
@@ -196,10 +180,8 @@ internal static class ZodiacSeries
         (Job.SMN, 12195), (Job.SCH, 12204),
     ];
 
-    // Membership and order from JournalGenre 88 ("Zodiac Weapons") plus the unlock quest
-    // 66241, chained via the Quest sheet's PreviousQuest links. The base-stage per-job
-    // "A Relic Reborn" quests live in RelicRebornQuests instead. A duplicate row 67823
-    // also carries the name "The Vital Title"; 66097 is the one in the chain.
+    // Base-stage per-job "A Relic Reborn" quests live in RelicRebornQuests instead.
+    // A duplicate row 67823 also carries the name "The Vital Title"; 66097 is the one in the chain.
     private static readonly JournalQuest[] JournalQuests =
     [
         new(66241, "The Weaponsmith of Legend",   Repeatable: false),

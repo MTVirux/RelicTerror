@@ -7,10 +7,7 @@ namespace RelicTerror.Data;
 
 internal static class CompletionItemIdAudit
 {
-    // Map each step name we recognize to a substring expected in the item's
-    // game name. Stages whose item names do NOT contain the stage name (e.g.,
-    // Zodiac "Zenith" weapons aren't named "Zenith") are omitted — the audit
-    // only verifies the ID resolves to a real Item row in that case.
+    // Stages absent from this map are only checked for ID resolution.
     private static readonly Dictionary<string, string> StageNameTokens = new()
     {
         ["Hyperconductive"] = "Hyperconductive",

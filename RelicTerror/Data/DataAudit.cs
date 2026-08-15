@@ -7,7 +7,6 @@ namespace RelicTerror.Data;
 // Scope locates the identifier in the relic tables (series, job, step).
 internal sealed record AuditFinding(string Scope, string Message);
 
-// Sheet is the Excel sheet the section's identifiers were resolved against.
 internal sealed record AuditSection(string Sheet, int Checked, IReadOnlyList<AuditFinding> Findings);
 
 internal sealed record AuditReport(IReadOnlyList<AuditSection> Sections, string GameVersion)
@@ -16,12 +15,9 @@ internal sealed record AuditReport(IReadOnlyList<AuditSection> Sections, string 
     internal int Problems => Sections.Sum(s => s.Findings.Count);
 }
 
-// Relic identifiers are hand-authored, so a patch can silently invalidate them. Each sheet
-// audit resolves what it can and returns findings rather than logging them, so the same pass
-// serves both the load-time log line and the on-demand audit window.
-//
-// Debug-only: this is a development aid, so it is compiled out of the Release builds that
-// reach players rather than running (and logging) on every load.
+// Relic identifiers are hand-authored, so a patch can silently invalidate them. Audits return
+// findings rather than logging them, so one pass serves both the load-time log line and the
+// on-demand audit window.
 internal static class DataAudit
 {
     internal static AuditReport Run()

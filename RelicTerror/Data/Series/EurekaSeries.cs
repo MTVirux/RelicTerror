@@ -35,9 +35,8 @@ internal static class EurekaSeries
         Job.WHM, Job.BLM, Job.SMN, Job.SCH, Job.AST, Job.SAM, Job.RDM,
     ];
 
-    // Achievement job order for Eureka stages — verified empirically against the
-    // in-game Achievement sheet, 2026-05-17. Shared across Anemos (2030),
-    // Elemental (2082), Pyros (2143), and Eureka/Hydatos (2212).
+    // Achievement job order shared across Anemos (2030), Elemental (2082),
+    // Pyros (2143), and Eureka/Hydatos (2212).
     private static readonly Job[] AchievementJobOrder =
     [
         Job.PLD, Job.WAR, Job.DRK, Job.DRG, Job.MNK, Job.NIN, Job.SAM, Job.BRD,
@@ -72,9 +71,7 @@ internal static class EurekaSeries
 
     private static IReadOnlyList<RelicStep> BuildSteps(Job job) =>
     [
-        // Antiquated → starting weapon, obtained from level 70 job quest.
-        // No in-game achievement exists for this stage (verified 2026-05-17 against Achievement.csv).
-        // Identification falls back to CompletionItemIds.
+        // Antiquated - starting weapon, obtained from the level 70 job quest.
         new("Antiquated",
             AchievementId: null,
             CompletionItemIds: StageItems(job, AntiquatedBase),
@@ -112,17 +109,15 @@ internal static class EurekaSeries
                 new(HydatosCrystal,   "Hydatos Crystal",  350),
                 new(CrystallineScale, "Crystalline Scale",  5),
             ]),
-        // Physeos requires Baldesion Arsenal runs — tracked by Eureka Fragment drops.
-        // No in-game achievement exists for this stage (verified 2026-05-17 against Achievement.csv).
-        // Identification falls back to CompletionItemIds.
+        // Physeos requires Baldesion Arsenal runs - tracked by Eureka Fragment drops.
         new("Physeos",
             AchievementId: null,
             CompletionItemIds: StageItems(job, PhyseosBase),
             Requirements: [ new(EurekaFragment, "Eureka Fragment", 100) ]),
     ];
 
-    // Eureka has no journal step quests — every upgrade is an in-instance NPC trade.
-    // Only the unlock quest exists (JournalGenre 90, "The Forbidden Land, Eureka").
+    // Eureka has no journal step quests - every upgrade is an in-instance NPC trade,
+    // so only the unlock quest exists.
     private static readonly JournalQuest[] JournalQuests =
     [
         new(68614, "And We Shall Call It Eureka", Repeatable: false),

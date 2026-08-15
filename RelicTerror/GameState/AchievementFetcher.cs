@@ -6,11 +6,10 @@ using CSAchievement = FFXIVClientStructs.FFXIV.Client.Game.UI.Achievement;
 
 namespace RelicTerror.GameState;
 
-// Achievement completion only becomes readable via Achievement.IsComplete once the player
-// opens the Achievements window (State == Loaded). To fill relic step completion before that,
-// we request per-achievement progress from the server (the same mechanism the achievement UI
-// uses), which works as soon as the player is loaded. The server allows one outstanding
-// request at a time, so requests are drained one round-trip per frame.
+// Achievement.IsComplete only reads true once the player has opened the Achievements window
+// (State == Loaded). Until then we request per-achievement progress from the server, which works
+// as soon as the player is loaded. The server allows one outstanding request at a time, so
+// requests drain one round-trip per frame.
 internal sealed unsafe class AchievementFetcher : IDisposable
 {
     internal event Action? ProgressUpdated;
@@ -39,7 +38,6 @@ internal sealed unsafe class AchievementFetcher : IDisposable
         _fetchActive = _pending.Count > 0;
     }
 
-    // Character switch: drop the previous character's state and reload from persistence.
     internal void ResetForCharacter(IEnumerable<uint> persistedCompleted)
     {
         _pending.Clear();
@@ -67,10 +65,9 @@ internal sealed unsafe class AchievementFetcher : IDisposable
         return _complete.Contains(achievementId);
     }
 
-    // True while this achievement's completion is still unknown: its round-trip is queued
-    // but hasn't landed, and neither persistence nor the game's own achievement data can
-    // answer yet. Until it resolves, IsComplete reports false for a reason we can't tell
-    // apart from "genuinely incomplete" - callers use this to render a loading state.
+    // Completion still unknown: the round-trip is queued and neither persistence nor the game's
+    // achievement data can answer yet, so IsComplete's false is indistinguishable from a real
+    // "incomplete" - callers render a loading state instead.
     internal bool IsAwaiting(uint achievementId)
     {
         if (!_pending.Contains(achievementId) || _complete.Contains(achievementId))

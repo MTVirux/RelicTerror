@@ -127,20 +127,19 @@ internal sealed class ProgressReader
         return map;
     }
 
-    /// <summary>Where one item sits, and how much of it is there.</summary>
     internal sealed record ItemPlacement(string Label, int Quantity, StorageCategory Category);
 
     internal sealed record ItemLocation(string ItemName, IReadOnlyList<ItemPlacement> Placements);
 
     /// <summary>
-    /// Allagan Tools' view of the active character's storage, refreshed by the plugin's rebuild
-    /// loop. Null means it is unavailable and lookups fall back to scanning resident game memory.
+    /// Allagan Tools' view of the active character's storage. Null means it is unavailable and
+    /// lookups fall back to scanning resident game memory.
     /// </summary>
     internal InventorySnapshot? Snapshot { get; set; }
 
     /// <summary>
-    /// Whether lookups currently cover storage the game does not keep resident - unsummoned
-    /// retainers, the Free Company chest, housing. Drives the caveats shown in tooltips.
+    /// Whether lookups cover storage the game does not keep resident - unsummoned retainers, Free
+    /// Company chest, housing. Drives the caveats shown in tooltips.
     /// </summary>
     internal bool CoversAllStorage => Snapshot is not null;
 
@@ -193,8 +192,7 @@ internal sealed class ProgressReader
         return Ordered(merged);
     }
 
-    // Several stacks routinely share one label (four inventory pages all read as "Inventory"), so
-    // they collapse into a single line carrying the total.
+    // Several stacks share one label (four inventory pages all read "Inventory"); collapse to a total.
     private static void Accumulate(
         Dictionary<string, ItemPlacement> merged, string label, int quantity, StorageCategory category)
     {
@@ -260,8 +258,7 @@ internal sealed class ProgressReader
         _ => bag.ToString(),
     };
 
-    // Only one retainer's containers are resident at a time, so any hit in a retainer
-    // bag belongs to whichever retainer was last summoned.
+    // Only one retainer's containers are resident at a time, so a hit belongs to the last summoned.
     private static string RetainerLabel(bool equipped)
     {
         var name = ActiveRetainerName();

@@ -12,8 +12,6 @@ internal static class MandervilleSeries
     private const uint AmplifyingAchondrite   = 40322;
     private const uint CosmicCrystallite      = 41032;
 
-    // Achievement role order observed in the in-game Achievement sheet for this series.
-    // Stage IDs are contiguous; per-job offset is the index in this list.
     private static readonly Job[] AchievementJobOrder =
     [
         Job.PLD, Job.WAR, Job.DRK, Job.GNB,
@@ -23,9 +21,7 @@ internal static class MandervilleSeries
         Job.WHM, Job.SCH, Job.AST, Job.SGE,
     ];
 
-    // Item-id job order shared by every Manderville per-stage weapon block — verified
-    // empirically against the Item sheet (e.g. Manderville Sword 38400 → PLD, Knuckles
-    // 38401 → MNK, Axe 38402 → WAR). PLD weapon sits at base+0, PLD shield sits at base+19.
+    // Item-id job order. PLD weapon at base+0, shield at base+19, other jobs at base+offset.
     private static readonly Job[] WeaponOrder =
     [
         Job.PLD, Job.MNK, Job.WAR, Job.DRG, Job.BRD, Job.NIN, Job.DRK,
@@ -38,7 +34,6 @@ internal static class MandervilleSeries
     private const uint MajesticBase       = 3285; // "Reforged: Majestic Manderville <weapon>"
     private const uint MandervillousBase  = 3380; // "Perfect: Mandervillous <weapon>"
 
-    // Per-stage item-id bases. PLD weapon = base, PLD shield = base+19, other jobs = base+offset.
     private const uint MandervilleItemBase    = 38400; // Manderville Sword
     private const uint AmazingItemBase        = 39144; // Amazing Manderville Sword
     private const uint MajesticItemBase       = 39920; // Majestic Manderville Sword
@@ -78,8 +73,7 @@ internal static class MandervilleSeries
             Requirements: [ new(CosmicCrystallite, "Cosmic Crystallite", 3) ]),
     ];
 
-    // Membership and order from JournalGenre 86 ("Manderville Weapons"). Each stage pairs
-    // a once-only story quest with a repeatable per-weapon hand-in.
+    // JournalGenre 86 ("Manderville Weapons"), in progression order.
     private static readonly JournalQuest[] JournalQuests =
     [
         new(70188, "Make It a Manderville",      Repeatable: false), // Manderville

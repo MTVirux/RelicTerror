@@ -43,8 +43,7 @@ public static class ProgressCache
     {
         var steps = weapon.Steps;
 
-        // Floor scan: highest step whose identifier currently fires. Lookback marks
-        // every prior step complete by transitivity.
+        // Highest firing step - everything before it counts complete by transitivity.
         var floorIndex = -1;
         for (var i = 0; i < steps.Count; i++)
         {
@@ -61,9 +60,8 @@ public static class ProgressCache
                 break;
         }
 
-        // Regression guard: progress never goes backwards within a session. Item sources like
-        // the Armoire, Glamour Dresser, and retainer bags only return data when their windows
-        // are open, so a rebuild triggered while those are unloaded can produce a lower count.
+        // Armoire, Glamour Dresser and retainer bags only return data while open, so a rebuild
+        // with them unloaded reads low - never let progress go backwards.
         if (floor is not null && floor.CompletedSteps > completedSteps)
             completedSteps = floor.CompletedSteps;
 
@@ -111,16 +109,9 @@ public static class ProgressCache
             weapon.HasReplica ? weapon.ReplicaItemId : null);
     }
 
-    // Single source of truth for step completion. Priority chain:
-    //   1. CompletionQuestId — when set, authoritative. Job-specific quest
-    //      completion flags are always memory-resident, so this needs no fetch.
-    //   2. AchievementId — when set, authoritative. Owning the form weapon does
-    //      NOT mark the step done if the achievement is incomplete.
-    //   3. CompletionItemIds — fallback identifier when neither is set.
-    //      Any listed ID present in tracked inventory / Armoury / Glamour Dresser
-    //      / Armoire counts.
-    //   4. Otherwise false. Material Requirements NEVER identify completion;
-    //      they only drive the per-step progress display.
+    // Strict priority: quest, then achievement, then items. The first one set wins outright -
+    // owning the form weapon does not complete a step whose achievement is still incomplete.
+    // Material Requirements never identify completion, they only drive the progress display.
     private static bool IsStepComplete(
         RelicStep step,
         IReadOnlyDictionary<uint, int> itemCounts,

@@ -21,10 +21,8 @@ internal static class PhantomSeries
         Job.WHM, Job.SCH, Job.AST, Job.SGE,
     ];
 
-    // Item-id job order shared by every Phantom per-stage weapon block — verified
-    // against the Item sheet's ClassJobCategory for every offset (Sword 47869 → PLD,
-    // Guillotine 47879 → DRK, Blade 47882 → SAM, Pendulums 47887 → SGE).
-    // PLD weapon sits at base+0, PLD shield sits at base+21.
+    // Item-id job order, confirmed per offset against ClassJobCategory (47879 -> DRK, 47882 -> SAM).
+    // PLD weapon at base+0, shield at base+21.
     private static readonly Job[] WeaponOrder =
     [
         Job.PLD, Job.MNK, Job.WAR, Job.DRG, Job.BRD, Job.WHM, Job.BLM,
@@ -38,7 +36,6 @@ internal static class PhantomSeries
     private const uint ObscurumBase  = 3842; // "Clare Obscurum: <weapon> Obscurum"
     private const uint OccultumBase  = 3949; // "Cut Above the Rest: <weapon> Occultum"
 
-    // Per-stage item-id bases. PLD weapon = base, PLD shield = base+21, other jobs = base+offset.
     private const uint PenumbraeItemBase  = 47869; // Phantom Sword Penumbrae
     private const uint UmbraeItemBase     = 47006; // Phantom Sword Umbrae
     private const uint ObscurumItemBase   = 50032; // Phantom Sword Obscurum
@@ -73,22 +70,19 @@ internal static class PhantomSeries
             AchievementId: AchId(ObscurumBase, job),
             CompletionItemIds: StageItems(job, ObscurumItemBase),
             Requirements: [ new(WaningArcanite, "Waning Arcanite", 3) ]),
-        // No in-game achievement exists for this stage (verified 2026-08-15 against the
-        // Achievement sheet — the Obscurum block ends at 3862 and nothing Phantom-related
-        // appears until the Occultum block at 3949). Falls back to CompletionItemIds.
+        // No achievement exists for Eclipticum - the sheet jumps from Obscurum to Occultum.
         new("Eclipticum",
             AchievementId: null,
             CompletionItemIds: StageItems(job, EclipticumItemBase),
             Requirements: [ new(EclipticArcanite, "Ecliptic Arcanite", 3) ]),
-        // Gated on filling the Knowledge Crystal with martial memories — no item turn-in.
+        // Gated on filling the Knowledge Crystal with martial memories - no item turn-in.
         new("Occultum",
             AchievementId: AchId(OccultumBase, job),
             CompletionItemIds: StageItems(job, OccultumItemBase),
             Requirements: []),
     ];
 
-    // Membership and order from JournalGenre 92 ("Phantom Weapons"). All once-only —
-    // additional weapons are NPC exchanges, not quest re-runs.
+    // JournalGenre 92 ("Phantom Weapons"). All once-only - extra weapons come from NPC exchanges.
     private static readonly JournalQuest[] JournalQuests =
     [
         new(70855, "Arcane Artistry",             Repeatable: false),

@@ -7,10 +7,7 @@ namespace RelicTerror.Data;
 
 internal static class AchievementIdAudit
 {
-    // For stages whose achievement name contains a recognizable token, verify
-    // that the resolved Achievement row's name contains the token. Stages
-    // omitted from this map are only checked for ID resolution (no name token
-    // assertion).
+    // Stages absent from this map are only checked for ID resolution.
     private static readonly Dictionary<string, string> StageNameTokens = new()
     {
         // Anima

@@ -5,8 +5,8 @@ using CSItemFinder = FFXIVClientStructs.FFXIV.Client.UI.Misc.ItemFinderModule;
 namespace RelicTerror.UI;
 
 /// <summary>
-/// Wires detail-panel rows up to the game's own Item Search (/isearch), which highlights
-/// where an item sits across inventory, Armoury Chest, saddlebags, and retainers.
+/// Wires rows up to the game's own Item Search (/isearch), which highlights where an item sits
+/// across inventory, Armoury Chest, saddlebags, and retainers.
 /// </summary>
 internal static class ItemSearch
 {
@@ -23,8 +23,7 @@ internal static class ItemSearch
     }
 
     /// <summary>
-    /// Makes the item just drawn trigger an Item Search on click. A zero
-    /// <paramref name="itemId"/> leaves the row inert - no cursor change, no click handling.
+    /// Makes the item just drawn trigger an Item Search on click. A zero id leaves the row inert.
     /// </summary>
     /// <returns>Whether the row is hovered, so callers can draw their own tooltip.</returns>
     internal static bool Row(uint itemId)

@@ -33,8 +33,7 @@ public sealed class CharacterInfo
 
     public Dictionary<string, RelicFloor> ProgressFloors { get; set; } = [];
 
-    // Achievement completion is monotonic, so persisting it lets steps resolve
-    // without re-querying the server on every login.
+    // Achievement completion is monotonic, so persisting it avoids a server query per login.
     public HashSet<uint> CompletedAchievements { get; set; } = [];
     public DateTime LastAchievementFetch { get; set; }
 }

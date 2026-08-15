@@ -1,9 +1,6 @@
 namespace RelicTerror.GameState;
 
-/// <summary>
-/// Ordering bucket for a placement, so tooltips list what is on the character before what needs
-/// a trip to fetch.
-/// </summary>
+/// <summary>Ordering bucket, so tooltips list on-character storage before what needs a trip.</summary>
 internal enum StorageCategory
 {
     Personal    = 0,
@@ -14,13 +11,12 @@ internal enum StorageCategory
 
 /// <summary>
 /// Container ids exactly as Allagan Tools reports them (its InventoryType enum, row index 20).
-/// Mirrored here rather than referenced so RelicTerror takes no assembly dependency on Allagan
-/// Tools - an id this table does not recognise still renders, just with a numeric label.
+/// Mirrored rather than referenced so we take no assembly dependency on it - an unrecognised id
+/// still renders, just with a numeric label.
 /// </summary>
 internal static class ContainerLabels
 {
-    // Another player's gear seen through the Examine window. Never the local character's, so it
-    // must not reach counts even though it can appear in a tracked inventory.
+    // Another player's gear seen through the Examine window - never ours, so it must not be counted.
     private const uint ExamineContainer = 2009;
 
     internal const uint ArmoireContainer       = 2500;
@@ -72,8 +68,7 @@ internal static class ContainerLabels
             _                        => ($"Container {container}",       StorageCategory.Personal),
         };
 
-    // Which part of the retainer holds the item folds into the same parenthetical, so a name
-    // never trails two of them - "Moogleworth (retainer, on sale)", not "... (retainer) (on sale)".
+    // Fold the sub-container into one parenthetical: "Moogleworth (retainer, on sale)".
     private static string RetainerLabel(ulong retainerId, string? suffix)
     {
         var name = OwnerNames.Retainer(retainerId);

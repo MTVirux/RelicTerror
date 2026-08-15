@@ -4,19 +4,14 @@ using System.Numerics;
 namespace RelicTerror.UI;
 
 /// <summary>
-/// One optional plugin RelicTerror co-operates with but never requires. The wording lives here
-/// rather than at each draw site so the title bar tooltip and the settings window cannot drift
-/// apart as the integration's behaviour changes.
+/// One optional plugin RelicTerror co-operates with but never requires. The wording lives here so
+/// the title bar tooltip and the settings window cannot drift apart.
 /// </summary>
 internal readonly record struct IntegrationStatus(string Name, bool Connected, string State, string Detail)
 {
     internal Vector4 Color => Connected ? Integrations.ConnectedColor : Integrations.AbsentColor;
 }
 
-/// <summary>
-/// The full roster of optional plugin integrations, in one place so a new one is added here and
-/// appears in every indicator at once.
-/// </summary>
 internal static class Integrations
 {
     internal static readonly Vector4 ConnectedColor = new(0.3f,  0.85f, 0.5f,  1f);
@@ -36,9 +31,8 @@ internal static class Integrations
             : "Falling back to inventories the game keeps loaded. Retainer bags only report\nwhile that retainer is summoned. Install Allagan Tools to search them all.");
 
     /// <summary>
-    /// The indicator's tint. White when every integration is live: there is nothing to flag, so it
-    /// reads as an ordinary title bar button. Colour is spent only on what needs attention, which
-    /// is why this differs from the per-integration text colour.
+    /// White when every integration is live so the button reads as ordinary - colour is spent only
+    /// on what needs attention, unlike the per-integration text colour.
     /// </summary>
     internal static Vector4 AggregateColor(IReadOnlyList<IntegrationStatus> statuses)
     {

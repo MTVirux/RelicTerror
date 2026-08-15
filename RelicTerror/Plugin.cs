@@ -19,8 +19,7 @@ public sealed class Plugin : IDalamudPlugin
 {
     private const string CommandName = "/rt";
 
-    // The data audit is a development aid, compiled out of Release so it neither ships to
-    // players nor logs on their loads.
+    // Audit is a dev aid - kept out of Release builds.
 #if DEBUG
     private const string HelpText  = "Open the RelicTerror tracker window. \"/rt config\" for settings, \"/rt refetch\" to re-pull achievements, \"/rt audit\" to re-check tracked IDs against game data.";
     private const string KnownArgs = "config, refetch, audit";
@@ -31,12 +30,11 @@ public sealed class Plugin : IDalamudPlugin
 
     internal static Configuration Config { get; private set; } = null!;
 
-    // Allagan Tools allocates an array per item stack per owner on every pull, and inventory
-    // events arrive in bursts, so the snapshot is refreshed at most this often.
+    // Allagan Tools allocates per item stack per owner on each pull and inventory events
+    // arrive in bursts, so the snapshot is throttled.
     private static readonly TimeSpan SnapshotInterval = TimeSpan.FromSeconds(2);
 
-    // Whether Allagan Tools is there at all is a single bool call, cheap enough to ask on its own
-    // cadence rather than only when a pull happens to run.
+    // Presence is a single cheap bool call, so it polls independently of snapshot pulls.
     private static readonly TimeSpan AvailabilityInterval = TimeSpan.FromSeconds(1);
 
     private readonly IDalamudPluginInterface _pluginInterface;
@@ -56,16 +54,13 @@ public sealed class Plugin : IDalamudPlugin
     private IReadOnlyDictionary<(string, Job), WeaponProgress> _progressCache
         = new Dictionary<(string, Job), WeaponProgress>();
 
-    // Snapshot from the last rebuild, reused by the item-totals window so it doesn't
-    // rescan every bag each frame.
+    // Reused by the item-totals window so it does not rescan every bag each frame.
     private IReadOnlyDictionary<uint, int> _itemCounts = new Dictionary<uint, int>();
 
-    // Retainer inventories only return data while a retainer is summoned, and the load
-    // fires a burst of per-slot events. Coalesce them into one rebuild on the next frame.
+    // Retainer loads fire a burst of per-slot events - coalesce into one rebuild next frame.
     private bool _rebuildPending;
 
-    // ContentId may not be loaded on the Login tick itself, so achievement hydration
-    // (and the first-time fetch decision) is deferred to the frame loop.
+    // ContentId may not be loaded on the Login tick, so hydration waits for the frame loop.
     private bool _achievementHydratePending;
     private bool _achievementFetchCompleted;
 
@@ -120,11 +115,8 @@ public sealed class Plugin : IDalamudPlugin
         _achievementHydratePending = true;
     }
 
-    // v3: ResistanceSeries achievement order was corrected — drop any persisted floors
-    // since the regression guard would otherwise keep stale values pinned.
-    // v4: Relic-tracking semantics revamp — strict identifier priority replaces the
-    // old any-of rule. No data migration required; existing CompletedSteps floors
-    // remain valid high-water marks under the new logic.
+    // v3: Resistance achievement order changed - stale floors must go or the regression guard
+    // pins them forever. v4: identifier-priority revamp, existing floors stay valid.
     private static void MigrateConfig()
     {
         if (Config.Version >= 4) return;
@@ -173,9 +165,8 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    // A cell's status is still resolving while any achievement it depends on is awaiting its
-    // server round-trip. Steps with a CompletionQuestId never consult achievements, so they
-    // are excluded - their quest flags are memory-resident and answer immediately.
+    // Quest-identified steps are excluded: their flags are memory-resident, so only pending
+    // achievement round-trips can leave a cell unresolved.
     private bool IsWeaponResolving((string SeriesId, Job Job) cell)
     {
         if (!WeaponAchievementIds.TryGetValue(cell, out var ids)) return false;
@@ -204,9 +195,8 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnLogin()
     {
-        // Different character: drop the previous floor and seed from the new character's
-        // persisted high-water mark (if any). ContentId may not be loaded yet on the very
-        // first Login tick — a later inventory/unlock event will rebuild and resave.
+        // ContentId may not be loaded on the first Login tick - a later inventory/unlock
+        // event rebuilds and resaves.
         _progressCache = TryHydrateFromPersistedFloors();
 
         // The previous character's storage is meaningless now; force a pull past the throttle.
@@ -214,7 +204,7 @@ public sealed class Plugin : IDalamudPlugin
         _progressReader.Snapshot = null;
         RebuildCache();
 
-        // Achievement completion is per-character; rehydrate (and maybe re-pull) for the new login.
+        // Achievement completion is per-character.
         _achievementHydratePending = true;
     }
 
@@ -315,8 +305,7 @@ public sealed class Plugin : IDalamudPlugin
     private void OpenItemTotalsUi() => _itemTotalsWindow.IsOpen = true;
 
 #if DEBUG
-    // Re-run rather than show the load-time report: the point of asking is to see the
-    // result against game data as it stands now.
+    // Re-run so the report reflects game data as it stands now.
     private void OpenAuditUi()
     {
         _auditWindow.Rerun();
@@ -324,10 +313,8 @@ public sealed class Plugin : IDalamudPlugin
     }
 #endif
 
-    // Allagan Tools can be installed, enabled or unloaded at any point in a session, including
-    // after RelicTerror itself has loaded, so its presence is polled rather than inferred from the
-    // last pull. Either direction invalidates the counts: they must start coming from it, or go
-    // back to the resident scan.
+    // Allagan Tools can load or unload mid-session, so presence is polled; a change either
+    // direction invalidates the counts.
     private void PollAllaganTools()
     {
         var now = DateTime.UtcNow;
@@ -339,24 +326,21 @@ public sealed class Plugin : IDalamudPlugin
 
         _allaganToolsAvailable = available;
 
-        // Its view of storage left with it; nulling the snapshot here rather than waiting for the
-        // rebuild keeps the fallback from serving counts read through a plugin that is now gone.
+        // Drop its view of storage now so the fallback never serves counts from a gone plugin.
         if (!available) _progressReader.Snapshot = null;
 
         _rebuildPending = true;
     }
 
-    // Allagan Tools sees storage the game only keeps resident while it is open, so when it answers
-    // it becomes the sole count source. Merging it with the resident scan would double-count every
-    // item both can see; it reads the same memory, so nothing is lost by preferring it outright.
+    // When Allagan Tools answers it is the sole count source - merging with the resident scan
+    // would double-count, and it reads the same memory anyway.
     private void RefreshInventorySnapshot()
     {
         var now = DateTime.UtcNow;
         if (now - _lastSnapshotPull < SnapshotInterval)
         {
-            // Whatever triggered this rebuild has not reached the snapshot yet, so ask for another
-            // rebuild once the throttle expires. Without this the change is simply lost until some
-            // later, unrelated event happens to rebuild outside the window.
+            // The triggering change has not reached the snapshot yet - rebuild once the throttle
+            // expires, or it is lost until some unrelated later event.
             _snapshotRefreshSkipped = true;
             return;
         }

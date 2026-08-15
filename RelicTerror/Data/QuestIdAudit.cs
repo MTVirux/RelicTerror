@@ -53,8 +53,7 @@ internal static class QuestIdAudit
         return new AuditSection("Quest", count, findings);
     }
 
-    // Repeatable quests carry a leading private-use-area icon glyph (U+E000-U+F8FF)
-    // in the sheet name; strip it before comparing.
+    // Repeatable quest names carry a leading private-use-area icon glyph (U+E000-U+F8FF).
     private static string StripIconGlyphs(string name)
     {
         var sb = new StringBuilder(name.Length);

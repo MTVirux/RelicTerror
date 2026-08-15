@@ -11,8 +11,7 @@ internal static class QuestActivityPanel
     private static readonly Vector4 ColorCompleted  = new(0.5f,  0.5f,  0.5f,  1f);
     private static readonly Vector4 ColorNotStarted = new(0.35f, 0.35f, 0.35f, 1f);
 
-    // Space the section still occupies once collapsed: the gap above it, the
-    // separator's own spacing, and the header row.
+    // The gap above the section, the separator's own spacing, and the header row.
     internal static float CollapsedHeight() =>
         (ImGui.GetStyle().ItemSpacing.Y * 3f) + ImGui.GetFrameHeight();
 

@@ -10,9 +10,8 @@ using RelicTerror.State;
 namespace RelicTerror.UI;
 
 /// <summary>
-/// Item lookup plus how much storage it can actually see. <paramref name="CoversAllStorage"/> is
-/// false when only resident game memory is readable, which is what the summon-your-retainer
-/// caveats exist to explain - with Allagan Tools answering they would be wrong.
+/// <paramref name="CoversAllStorage"/> is false when only resident game memory is readable - that
+/// is when the summon-your-retainer caveats apply.
 /// </summary>
 internal sealed record LocationLookup(
     Func<uint, ProgressReader.ItemLocation?> Find,
@@ -341,8 +340,8 @@ internal static class DetailPanel
             return;
         }
 
-        // A form pinned to a real bag proves every earlier form was built and upgraded away,
-        // so those steps read as completed even though their items no longer exist.
+        // A form found in a bag proves earlier forms were built and upgraded away, so they count
+        // as complete despite their items no longer existing.
         var confirmedIndex = -1;
         var locations = new string?[progress.Forms.Count];
         for (var i = 0; i < progress.Forms.Count; i++)

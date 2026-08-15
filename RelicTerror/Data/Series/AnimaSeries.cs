@@ -15,7 +15,7 @@ internal static class AnimaSeries
     private const uint LuminousEarthCrystal     = 13572;
     private const uint LuminousWaterCrystal     = 13574;
 
-    // Anima (Unidentifiable materials + crafted components)
+    // Anima
     private const uint UnidentifiableBone  = 13582;
     private const uint UnidentifiableShell = 13584;
     private const uint UnidentifiableOre   = 13586;
@@ -42,7 +42,7 @@ internal static class AnimaSeries
     private const uint ArchaicEnchantedInk = 16934;
 
     // Achievement job order shared across Animaniac (1406), Hyper Animaniac (1499),
-    // and It's Really Done (1708) — per the in-game Achievement sheet.
+    // and It's Really Done (1708).
     private static readonly Job[] AchievementJobOrder =
     [
         Job.PLD, Job.MNK, Job.WAR, Job.DRG, Job.BRD,
@@ -50,8 +50,7 @@ internal static class AnimaSeries
         Job.NIN, Job.MCH, Job.DRK, Job.AST,
     ];
 
-    // Item-id job order for all per-stage Anima weapon blocks. Each stage stores
-    // 13 weapons in this sequence, followed by the PLD shield at offset 13.
+    // Item-id job order for every stage block - 13 weapons, then the PLD shield at offset 13.
     private static readonly Job[] WeaponOrder =
     [
         Job.PLD, Job.MNK, Job.WAR, Job.DRG, Job.BRD, Job.NIN, Job.DRK,
@@ -65,9 +64,9 @@ internal static class AnimaSeries
     private const uint CompleteBaseAch     = 1695; // "It's Done: <weapon>"
     private const uint LuxBase             = 1708; // "It's Really Done: <weapon>"
 
-    // Stage item-id bases — PLD weapon sits at the base, PLD shield sits at base+13.
+    // Stage item-id bases.
     private const uint AnimatedBase        = 13611;
-    private const uint AnimaBase           = 13223; // Anima stage (items are unique proper nouns, e.g. "Almace", "Aettir")
+    private const uint AnimaBase           = 13223; // Anima stage
     private const uint HyperItemBase       = 14870;
     private const uint ReconditionedBase   = 15223;
     private const uint SharpenedBase       = 15237;
@@ -90,8 +89,6 @@ internal static class AnimaSeries
 
     private static IReadOnlyList<RelicStep> BuildSteps(Job job) =>
     [
-        // No in-game achievement exists for this stage (verified 2026-05-17 against Achievement.csv).
-        // Identification falls back to CompletionItemIds.
         new("Animated",
             AchievementId: null,
             CompletionItemIds: StageItems(job, AnimatedBase),
@@ -104,8 +101,7 @@ internal static class AnimaSeries
                 new(LuminousEarthCrystal,     "Luminous Earth Crystal",     1),
                 new(LuminousWaterCrystal,     "Luminous Water Crystal",     1),
             ]),
-        // Awoken requires completing 10 specific dungeons with the weapon equipped — no item tracking.
-        // No in-game achievement exists for this stage (verified 2026-05-17 against Achievement.csv).
+        // Awoken requires completing 10 specific dungeons with the weapon equipped - no item tracking.
         new("Awoken",
             AchievementId: null,
             CompletionItemIds: null,
@@ -158,8 +154,6 @@ internal static class AnimaSeries
         (Job.AST, 21010),
     ];
 
-    // Membership and order from JournalGenre 89 ("Anima Weapons"), chained via the Quest
-    // sheet's PreviousQuest links; stage notes from each quest's required-item fields.
     // The Reconditioned Umbrite/Crystal Sand trade runs through hidden system quest 67870
     // ("Recondition the Anima"), which never appears in the journal and is omitted here.
     private static readonly JournalQuest[] JournalQuests =

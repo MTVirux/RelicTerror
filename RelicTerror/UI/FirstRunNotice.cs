@@ -48,8 +48,7 @@ internal sealed class FirstRunNotice
             ImGui.EndPopup();
         }
 
-        // Titlebar X: BeginPopupModal returns false with open flipped to false,
-        // and the popup is already closed - just persist the acknowledgement.
+        // Titlebar X: BeginPopupModal already closed the popup and flipped open to false.
         if (!open)
             Acknowledge();
     }

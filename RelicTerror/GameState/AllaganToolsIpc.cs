@@ -5,13 +5,11 @@ using Dalamud.Plugin.Ipc;
 namespace RelicTerror.GameState;
 
 /// <summary>
-/// The Allagan Tools call gates RelicTerror reads (the plugin ships under the Dalamud internal
-/// name "InventoryTools"). Allagan Tools persists every container it has ever seen, so it can
-/// answer for retainers, the Free Company chest and housing storerooms that the game only keeps
-/// in memory while they are open.
-///
-/// Every entry point reports unavailability instead of throwing: RelicTerror must behave exactly
-/// as it did before when Allagan Tools is absent, stopped, or on an incompatible version.
+/// The Allagan Tools call gates RelicTerror reads (it ships under the Dalamud internal name
+/// "InventoryTools"). It persists every container it has seen, so it can answer for retainers,
+/// the Free Company chest and housing storerooms the game only keeps resident while open.
+/// Every entry point reports unavailability instead of throwing, so an absent, stopped or
+/// incompatible Allagan Tools leaves RelicTerror behaving exactly as before.
 /// </summary>
 internal sealed class AllaganToolsIpc
 {
@@ -25,8 +23,8 @@ internal sealed class AllaganToolsIpc
     private readonly ICallGateSubscriber<bool, HashSet<ulong>>       _ownedCharacters;
     private readonly ICallGateSubscriber<ulong, HashSet<ulong[]>>    _characterItems;
 
-    // One failed gate means the rest of this pull is untrustworthy too, so the whole pull is
-    // abandoned rather than half-read. ResetDegraded reopens it for the next throttled attempt.
+    // One failed gate makes the rest of the pull untrustworthy, so the whole pull is abandoned.
+    // ResetDegraded reopens it for the next throttled attempt.
     private bool _degraded;
 
     internal AllaganToolsIpc()
@@ -41,9 +39,8 @@ internal sealed class AllaganToolsIpc
     internal bool IsAvailable => Invoke(_isInitialized.InvokeFunc, false);
 
     /// <summary>
-    /// The gate on its own, outside a pull. It ignores the degraded latch so Allagan Tools being
-    /// enabled after a failed read is noticed rather than staying written off, and it stays out of
-    /// the log because the caller repeats it on a timer.
+    /// The gate on its own, outside a pull. Ignores the degraded latch so Allagan Tools being
+    /// enabled after a failed read is noticed, and stays out of the log because the caller polls it.
     /// </summary>
     internal bool Probe()
     {
@@ -60,15 +57,15 @@ internal sealed class AllaganToolsIpc
     internal ulong CurrentCharacter() => Invoke(_currentCharacter.InvokeFunc, 0UL);
 
     /// <summary>
-    /// The active character plus everything it owns - its retainers, its Free Company and its
-    /// houses. Allagan Tools scopes this itself, so no alt-character data can reach us.
+    /// The active character plus what it owns - retainers, Free Company, houses. Allagan Tools
+    /// scopes this itself, so no alt-character data can reach us.
     /// </summary>
     internal IReadOnlySet<ulong> OwnedCharacterIds() =>
         Invoke<IReadOnlySet<ulong>>(() => _ownedCharacters.InvokeFunc(true), new HashSet<ulong>());
 
     /// <remarks>
-    /// Upstream indexes its inventory dictionary with First(), so an id it does not know throws
-    /// across the IPC boundary. Only ids from <see cref="OwnedCharacterIds"/> may be passed.
+    /// Upstream indexes its inventory dictionary with First(), so an unknown id throws across the
+    /// IPC boundary. Only ids from <see cref="OwnedCharacterIds"/> may be passed.
     /// </remarks>
     internal IReadOnlyCollection<ulong[]> CharacterItems(ulong characterId) =>
         Invoke<IReadOnlyCollection<ulong[]>>(() => _characterItems.InvokeFunc(characterId), []);

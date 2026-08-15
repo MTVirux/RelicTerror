@@ -42,8 +42,7 @@ internal static class GridView
         Func<(string SeriesId, Job Job), bool> isResolving,
         ref (string SeriesId, Job Job)? selectedCell)
     {
-        // Rows stretch to divide up whatever vertical space the window leaves, so the grid always
-        // ends flush with the bottom instead of trailing empty space.
+        // Row height is derived from the space left over so the grid ends flush with the bottom.
         var cellPaddingY = ImGui.GetStyle().CellPadding.Y;
         var headerHeight = ImGui.GetTextLineHeight() + (cellPaddingY * 2f);
         var available    = ImGui.GetContentRegionAvail().Y;
@@ -111,9 +110,8 @@ internal static class GridView
         ImGui.EndTable();
     }
 
-    // Row bounds come from rounding running totals rather than each row's own height, so the
-    // leftover fraction is spread over the grid: consecutive rows differ by at most a pixel and
-    // the bottom edge follows the window continuously instead of in row-sized steps.
+    // Bounds round running totals rather than each row's own height, spreading the leftover
+    // fraction across the grid so rows differ by at most a pixel and the bottom stays flush.
     private static float BeginRow(ref int rowIndex, float exactRow, float cellPaddingY)
     {
         var top    = MathF.Floor(rowIndex * exactRow);
@@ -168,8 +166,7 @@ internal static class GridView
             ImGui.SetCursorPosY(ImGui.GetCursorPosY() + ((cellHeight - size.Y) * 0.5f));
     }
 
-    // Known progress always wins over the loading state - a partially complete weapon shows
-    // its real standing rather than regressing to a spinner while later steps resolve.
+    // Known progress wins over the loading state so a partial weapon never regresses to a spinner.
     private static (FontAwesomeIcon Icon, Vector4 Color, bool Loading) GetCellDisplay(
         IReadOnlyDictionary<(string, Job), WeaponProgress> weapons,
         (string SeriesId, Job Job) key,
