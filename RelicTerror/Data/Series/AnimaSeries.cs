@@ -15,7 +15,7 @@ internal static class AnimaSeries
     private const uint LuminousEarthCrystal     = 13572;
     private const uint LuminousWaterCrystal     = 13574;
 
-    // Animus (Unidentifiable materials + crafted components)
+    // Anima (Unidentifiable materials + crafted components)
     private const uint UnidentifiableBone  = 13582;
     private const uint UnidentifiableShell = 13584;
     private const uint UnidentifiableOre   = 13586;
@@ -67,7 +67,7 @@ internal static class AnimaSeries
 
     // Stage item-id bases — PLD weapon sits at the base, PLD shield sits at base+13.
     private const uint AnimatedBase        = 13611;
-    private const uint AnimaBase           = 13223; // Animus stage (items are unique proper nouns, e.g. "Almace", "Aettir")
+    private const uint AnimaBase           = 13223; // Anima stage (items are unique proper nouns, e.g. "Almace", "Aettir")
     private const uint HyperItemBase       = 14870;
     private const uint ReconditionedBase   = 15223;
     private const uint SharpenedBase       = 15237;
@@ -110,7 +110,7 @@ internal static class AnimaSeries
             AchievementId: null,
             CompletionItemIds: null,
             Requirements: []),
-        new("Animus",
+        new("Anima",
             AchievementId: AchId(AnimusBase, job),
             CompletionItemIds: StageItems(job, AnimaBase),
             Requirements:

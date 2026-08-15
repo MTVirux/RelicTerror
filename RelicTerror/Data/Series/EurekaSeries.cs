@@ -28,7 +28,7 @@ internal static class EurekaSeries
     private const uint EurekaFragment = 24808;
 
     // Weapon item order is consistent across every Eureka stage (Antiquated, Anemos,
-    // Elemental, Pyros, Hydatos, Physeos). PLD shield sits at offset 15 within each block.
+    // Elemental, Pyros, Eureka, Physeos). PLD shield sits at offset 15 within each block.
     private static readonly Job[] WeaponOrder =
     [
         Job.PLD, Job.MNK, Job.WAR, Job.DRG, Job.BRD, Job.NIN, Job.DRK, Job.MCH,

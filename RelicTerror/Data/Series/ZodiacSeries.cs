@@ -159,7 +159,7 @@ internal static class ZodiacSeries
             Requirements: []),
         // Only a generic single-weapon achievement exists ("Lethal Weapon", id 1054);
         // no per-job achievement exists, so identification falls back to CompletionItemIds.
-        new("Braves",
+        new("Zodiac Braves",
             AchievementId: null,
             CompletionItemIds: StageItems(job, BravesBase, NinBraves),
             Requirements:
